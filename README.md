@@ -1,10 +1,12 @@
 # TMDD - Threat Modeling Driven Development
 
-_Threat model as code — integrated into your development workflow._
+_Threat model as code integrated into your development workflow._
 
-`tmdd` is a lightweight, YAML-based threat modeling framework designed for modern development workflows. It lets you define threat models alongside your codebase — in a format that's version-controllable, diffable, and easily consumed by AI agents.
+`tmdd` is a lightweight, YAML-based threat modeling framework designed for modern development workflows. It lets you define threat models alongside your codebase.
 
-If you know STRIDE or OWASP, `tmdd` helps you apply those frameworks directly in your repo. If you use AI coding assistants, `tmdd` generates security-aware prompts so your AI writes safer code from the start.
+If you know basics of threat modelling, `tmdd` helps you to maintain threat model directly in your repo. If you use AI coding assistants, `tmdd` generates security-aware prompts so your AI writes safer code from the start. 
+
+There's also Cursor skill provided, so your Cursor can build threat model in tmdd-compliant format by itself, and then you can generate your shiny threat modeling report using `tmdd-report`. 
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python Version](https://img.shields.io/badge/python-%3E%3D3.8-blue)](https://www.python.org/downloads/)
@@ -298,8 +300,8 @@ This gives you:
 
 TMDD ships with pre-built instructions for AI coding agents:
 
-- **Cursor Skill** (`agents/cursor-skill/`) — Drop-in skill for Cursor's agent mode. Enables architecture-aware threat modeling directly in your IDE.
-- **Claude Code** (`agents/AGENTS.md`) — Copy to your `.tmdd/` directory for Claude Code integration.
+- **[Cursor Skill](agents/cursor-skill/SKILL.md)** — Drop-in skill for Cursor's agent mode. Your Cursor can build a threat model in TMDD-compliant format by itself, and then you can generate your shiny threat modeling report using `tmdd-report`.
+- **[Claude Code](agents/AGENTS.md)** — Copy to your `.tmdd/` directory for Claude Code integration.
 
 These agents understand the TMDD YAML schema and can create, update, and validate threat models as part of your development workflow.
 
