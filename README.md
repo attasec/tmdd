@@ -26,6 +26,15 @@ cd tmdd
 pip install .
 ```
 
+### > Verify installation
+
+```bash
+tmdd --help
+tmdd-diagram --help
+tmdd-report --help
+```
+
+
 ### > Create your first threat model
 
 ```bash
@@ -44,15 +53,6 @@ tmdd lint
 tmdd feature "User Login"
 # Give the implementation prompt to your coding AI
 ```
-
-### > Verify installation
-
-```bash
-tmdd --help
-tmdd-diagram --help
-tmdd-report --help
-```
-
 ---
 
 ## How It Works
