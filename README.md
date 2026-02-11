@@ -1,23 +1,49 @@
 # TMDD - Threat Modeling Driven Development
 
-**Version 0.5.0**
+_Threat model as code — integrated into your development workflow._
 
-TMDD is a lightweight, YAML-based threat modeling framework designed for modern development workflows. It enables you to integrate threat model into your codebase - in a format that's also easily consumed by AI agents. 
+`tmdd` is a lightweight, YAML-based threat modeling framework designed for modern development workflows. It lets you define threat models alongside your codebase — in a format that's version-controllable, diffable, and easily consumed by AI agents.
 
-## Installation
+If you know STRIDE or OWASP, `tmdd` helps you apply those frameworks directly in your repo. If you use AI coding assistants, `tmdd` generates security-aware prompts so your AI writes safer code from the start.
 
-### From Source (Recommended)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python Version](https://img.shields.io/badge/python-%3E%3D3.8-blue)](https://www.python.org/downloads/)
+[![Version](https://img.shields.io/badge/version-0.5.0-green.svg)](https://github.com/attasec/tmdd)
+[![GitHub issues](https://img.shields.io/github/issues/attasec/tmdd)](https://github.com/attasec/tmdd/issues)
+[![GitHub stars](https://img.shields.io/github/stars/attasec/tmdd)](https://github.com/attasec/tmdd/stargazers)
+
+---
+
+## Get Started
+
+### > Install
 
 ```bash
-# Clone the repository
 git clone https://github.com/attasec/tmdd.git
 cd tmdd
-
-# Install
 pip install .
 ```
 
-### Verify Installation
+### > Create your first threat model
+
+```bash
+tmdd init --template web-app -n "My App" -d "App description"
+tmdd lint
+tmdd-diagram
+tmdd-report
+```
+
+### > Threat-model a new feature (AI workflow)
+
+```bash
+tmdd feature "User Login" -d "Email/password authentication"
+# Give the generated prompt to your AI assistant
+tmdd lint
+tmdd feature "User Login"
+# Give the implementation prompt to your coding AI
+```
+
+### > Verify installation
 
 ```bash
 tmdd --help
@@ -25,46 +51,27 @@ tmdd-diagram --help
 tmdd-report --help
 ```
 
-## Quick Start
+---
 
-```bash
-# Create a new project (defaults to .tmdd/ in current directory)
-tmdd init --template web-app -n "My App" -d "App description"
+## How It Works
 
-# Validate
-tmdd lint
-
-# Add a feature (AI workflow)
-tmdd feature "User Login" -d "Email/password authentication"
-
-# Generate consolidated files
-tmdd compile
-```
-
-All commands default to `.tmdd/` in the current directory. You can specify a custom path if needed:
-
-```bash
-tmdd init ./other-dir --template web-app -n "My App" -d "App description"
-tmdd lint ./other-dir
-```
-
-## Project Structure
+TMDD follows a **threat-model-first** development cycle. You define your system architecture and threats in YAML, then use those definitions to generate security-aware prompts for AI coding assistants — or as a structured reference for manual implementation.
 
 ```
-tmdd/
-├── src/                     # CLI package (tmdd command)
-│   ├── commands/            # Subcommands (init, lint, feature, compile)
-│   ├── generators/          # AI prompt generators (threat + implementation)
-│   └── templates/           # Project templates (minimal, web-app, api)
-├── agents/                  # Pre-built AI agent instructions
-│   ├── cursor-skill/        # Cursor Skill for architecture-aware threat modeling
-│   └── AGENTS.md            # Claude Code instructions (copy to .tmdd/)
-├── diagram.py               # tmdd-diagram command
-├── report.py                # tmdd-report command
-├── tmdd.schema.json         # JSON Schema for IDE autocomplete & validation
-├── tests/                   # Test suite
-└── .tmdd/                   # Demo threat model (TMDD modeling itself)
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  tmdd feature   │────>│  AI edits YAML  │────>│   tmdd lint     │
+│  (new feature)  │     │  (threat model) │     │   (validate)    │
+└─────────────────┘     └─────────────────┘     └─────────────────┘
+                                                        │
+┌─────────────────┐     ┌─────────────────┐             │
+│  AI implements  │<────│  tmdd feature   │<────────────┘
+│  (secure code)  │     │  (get prompt)   │
+└─────────────────┘     └─────────────────┘
 ```
+
+The AI steps are optional — you can edit the YAML files manually and use `tmdd` purely as a structured threat modeling tool.
+
+---
 
 ## Commands
 
@@ -76,6 +83,8 @@ tmdd/
 | `tmdd compile` | Generate consolidated YAML and prompts |
 | `tmdd-diagram` | Generate interactive architecture diagram (HTML) |
 | `tmdd-report` | Generate HTML threat model report |
+
+All commands default to `.tmdd/` in the current directory. You can specify a custom path if needed.
 
 ### init
 
@@ -115,8 +124,6 @@ The threat-model-first workflow. This command behaves differently depending on w
 - **New feature** (not in `features.yaml`): Generates a threat modeling prompt at `.tmdd/out/<name>.threatmodel.txt`. This prompt contains the existing system context (components, data flows, threats) and STRIDE guidance for the AI to analyze the feature and edit the YAML files.
 - **Existing feature** (already in `features.yaml`): Generates a secure implementation prompt at `.tmdd/out/<name>.prompt.txt`. This prompt contains the feature's threat-to-mitigation mappings formatted as a security requirements checklist for a coding AI agent.
 
-The AI steps are optional -- you can edit the YAML files manually and use `tmdd feature` purely to generate prompts.
-
 ```bash
 # Step 1: Start with a new feature (generates threat modeling prompt)
 tmdd feature "Password Reset" -d "Reset password via email"
@@ -138,7 +145,7 @@ Use `-p ./my-project` to target a different directory.
 
 Merges all `.tmdd/` files into consolidated output:
 
-- **Consolidated YAML** (`.tmdd/out/<system>.tm.yaml`): Single-file export of the entire threat model -- system metadata, all components, actors, data flows, threats, mitigations, and feature mappings. Useful for archiving, diffing, or feeding into other tools.
+- **Consolidated YAML** (`.tmdd/out/<system>.tm.yaml`): Single-file export of the entire threat model — system metadata, all components, actors, data flows, threats, mitigations, and feature mappings. Useful for archiving, diffing, or feeding into other tools.
 - **AI implementation prompt** (`.tmdd/out/<system>.prompt.txt`): Full-system security requirements prompt covering architecture, known threats, security controls, and feature requirements. Can be scoped to a single feature with `--feature`.
 
 ```bash
@@ -152,13 +159,15 @@ tmdd compile --feature "Password Reset"
 tmdd compile ./my-project
 ```
 
-## Visualization Tools
+---
+
+## Visualization
 
 Diagrams and reports are generated as self-contained HTML files using [Cytoscape.js](https://js.cytoscape.org/) loaded from a CDN. No extra Python dependencies are required, but an **internet connection** is needed to load the JavaScript libraries when viewing the output.
 
 ### tmdd-diagram
 
-Generates architecture diagrams from your threat model.
+Generates interactive architecture diagrams from your threat model.
 
 ```bash
 # From project root (looks for .tmdd/ by default)
@@ -190,6 +199,8 @@ tmdd-report -o ./reports -n security-report.html
 
 Output: `.tmdd/out/tm.html` (self-contained HTML)
 
+---
+
 ## Threat Model Structure
 
 ### Core Files
@@ -210,7 +221,7 @@ Output: `.tmdd/out/tm.html` (self-contained HTML)
 | `threats/mitigations.yaml` | Security controls (M001, M002...) |
 | `threats/threat_actors.yaml` | Adversary profiles (TA001...) |
 
-## ID Conventions
+### ID Conventions
 
 | Type | Pattern | Example |
 |------|---------|---------|
@@ -220,13 +231,37 @@ Output: `.tmdd/out/tm.html` (self-contained HTML)
 | Threat Actor | `^TA\d+$` | `TA001` |
 | Data Flow | `df_{source}_to_{dest}` | `df_user_to_api` |
 
+---
+
 ## Templates
 
 | Template | Description |
 |----------|-------------|
-| `minimal` | Bare skeleton - one actor, one component, empty catalogs |
+| `minimal` | Bare skeleton — one actor, one component, empty catalogs |
 | `web-app` | Frontend + API + DB with 7 common web threats pre-loaded |
 | `api` | API-focused with OWASP API Top 10 threats |
+
+---
+
+## Project Structure
+
+```
+tmdd/
+├── src/                     # CLI package (tmdd command)
+│   ├── commands/            # Subcommands (init, lint, feature, compile)
+│   ├── generators/          # AI prompt generators (threat + implementation)
+│   └── templates/           # Project templates (minimal, web-app, api)
+├── agents/                  # Pre-built AI agent instructions
+│   ├── cursor-skill/        # Cursor Skill for architecture-aware threat modeling
+│   └── AGENTS.md            # Claude Code instructions (copy to .tmdd/)
+├── diagram.py               # tmdd-diagram command
+├── report.py                # tmdd-report command
+├── tmdd.schema.json         # JSON Schema for IDE autocomplete & validation
+├── tests/                   # Test suite
+└── .tmdd/                   # Demo threat model (TMDD modeling itself)
+```
+
+---
 
 ## Editor Integration
 
@@ -257,23 +292,40 @@ This gives you:
 
 **Note**: Always run `tmdd lint` for full validation.
 
-## AI Workflow
+---
 
-TMDD is designed for AI-assisted development:
+## AI Agent Support
 
-1. **Threat Modeling**: AI reads the prompt and edits YAML files directly
-2. **Implementation**: AI receives security requirements and implements securely
+TMDD ships with pre-built instructions for AI coding agents:
 
+- **Cursor Skill** (`agents/cursor-skill/`) — Drop-in skill for Cursor's agent mode. Enables architecture-aware threat modeling directly in your IDE.
+- **Claude Code** (`agents/AGENTS.md`) — Copy to your `.tmdd/` directory for Claude Code integration.
+
+These agents understand the TMDD YAML schema and can create, update, and validate threat models as part of your development workflow.
+
+---
+
+## Contributing
+
+PRs and issues welcome! See the [issues page](https://github.com/attasec/tmdd/issues) for open tasks.
+
+```bash
+# Development install
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Format code
+black .
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  tmdd feature   │────▶│  AI edits YAML  │────▶│   tmdd lint     │
-│  (new feature)  │     │  (threat model) │     │   (validate)    │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                        │
-┌─────────────────┐     ┌─────────────────┐             │
-│  AI implements  │◀────│  tmdd feature   │◀────────────┘
-│  (secure code)  │     │  (get prompt)   │
-└─────────────────┘     └─────────────────┘
-```
+
+---
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE) for details.
+
+---
 
 **TMDD v0.5.0** — threat model as code.

@@ -13,7 +13,7 @@ setup(
     long_description=long_desc,
     long_description_content_type="text/markdown",
     author="mik0w",
-    license="MIT",
+    license="Apache-2.0",
     packages=find_packages(),
     py_modules=["diagram", "report"],
     include_package_data=True,
@@ -33,7 +33,7 @@ setup(
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python :: 3",
         "Topic :: Security",
     ],
