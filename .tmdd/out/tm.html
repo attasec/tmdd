@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TMDD CLI - Threat Model Report</title>
+    <style>* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #fff; color: #000; line-height: 1.5; }
+.container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+header { padding: 2rem 0; border-bottom: 2px solid #000; margin-bottom: 2rem; }
+header h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+header .subtitle { color: #444; }
+.stats-grid { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid #ccc; }
+.stat-card { text-align: center; }
+.stat-card .number { font-size: 1.75rem; font-weight: bold; }
+.stat-card .label { color: #444; font-size: 0.85rem; }
+section { margin-bottom: 2.5rem; }
+section h2 { font-size: 1.25rem; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #000; }
+#cy { width: 100%; height: 70vh; min-height: 500px; border: 1px solid #ddd; border-top: none; background: #fafbfc; }
+.diagram-toolbar { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.75rem; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px 4px 0 0; }
+.diagram-toolbar button { padding: 0.25rem 0.7rem; border: 1px solid #ccc; background: #fff; cursor: pointer; font-size: 0.85rem; border-radius: 3px; transition: background 0.15s; }
+.diagram-toolbar button:hover { background: #e0e0e0; }
+.diagram-hint { margin-left: auto; font-size: 0.75rem; color: #999; }
+#cy-wrapper { position: relative; }
+#diagram-legend { position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.93); border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem 0.75rem; font-size: 0.8rem; max-height: 220px; overflow-y: auto; z-index: 5; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.legend-title { font-weight: bold; margin-bottom: 0.3rem; font-size: 0.7rem; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+.legend-item { display: flex; align-items: center; gap: 0.4rem; padding: 0.12rem 0; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+#node-info { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.95); border: 1px solid #ddd; border-radius: 4px; padding: 0.6rem 0.8rem; font-size: 0.85rem; max-width: 300px; z-index: 5; box-shadow: 0 1px 6px rgba(0,0,0,0.12); display: none; line-height: 1.45; }
+#node-info strong { display: block; margin-bottom: 0.2rem; }
+#node-info .info-label { color: #888; font-size: 0.8em; }
+.legend-item { cursor: pointer; padding: 0.2rem 0.35rem; border-radius: 3px; transition: background 0.15s; }
+.legend-item:hover { background: rgba(0,0,0,0.06); }
+.legend-item.active { background: rgba(0,0,0,0.1); font-weight: bold; }
+#feature-panel { position: absolute; top: 10px; right: 10px; width: 340px; max-height: calc(100% - 20px); overflow-y: auto; background: rgba(255,255,255,0.97); border: 1px solid #ddd; border-radius: 5px; padding: 0; z-index: 10; box-shadow: 0 2px 12px rgba(0,0,0,0.15); display: none; font-size: 0.83rem; line-height: 1.45; }
+#feature-panel .fp-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; border-bottom: 1px solid #eee; background: #f8f9fa; border-radius: 5px 5px 0 0; }
+#feature-panel .fp-header .fp-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+#feature-panel .fp-header strong { flex: 1; font-size: 0.9rem; }
+#feature-panel .fp-close { border: none; background: none; cursor: pointer; font-size: 1.1rem; color: #999; padding: 0 0.2rem; }
+#feature-panel .fp-close:hover { color: #333; }
+#feature-panel .fp-body { padding: 0.6rem 0.75rem; }
+#feature-panel .fp-goal { color: #555; margin-bottom: 0.5rem; font-style: italic; }
+#feature-panel .fp-section { margin-bottom: 0.5rem; }
+#feature-panel .fp-section-title { font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #888; margin-bottom: 0.25rem; }
+.fp-threat { padding: 0.4rem 0.5rem; margin-bottom: 0.35rem; background: #f8f9fa; border-left: 3px solid #ccc; border-radius: 0 3px 3px 0; }
+.fp-threat-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; }
+.fp-threat-head code { font-weight: bold; }
+.fp-threat-head .sev { display: inline-block; padding: 0.05rem 0.35rem; font-size: 0.7rem; font-weight: bold; color: #fff; border-radius: 2px; }
+.fp-threat-head .stride-tag { display: inline-block; padding: 0.05rem 0.3rem; font-size: 0.7rem; font-weight: bold; color: #fff; border-radius: 2px; }
+.fp-threat .fp-mit { padding-left: 0.75rem; color: #555; font-size: 0.8rem; }
+.fp-threat .fp-mit code { font-size: 0.78rem; color: #333; margin-right: 0.2rem; }
+.fp-threat .fp-mode { font-size: 0.75rem; color: #999; font-style: italic; }
+.fp-flows { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.fp-flows code { font-size: 0.78rem; background: #eef; padding: 0.1rem 0.3rem; border-radius: 2px; }
+.no-diagram { color: #666; font-style: italic; padding: 2rem; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { padding: 0.6rem 0.75rem; text-align: left; border: 1px solid #ccc; }
+th { background: #f5f5f5; font-weight: bold; }
+tr.unused { color: #888; }
+tr.critical { background: #fff0f0; }
+code { font-family: Consolas, monospace; background: #f5f5f5; padding: 0.1rem 0.3rem; font-size: 0.85em; }
+.badge { display: inline-block; padding: 0.15rem 0.5rem; font-size: 0.75rem; font-weight: bold; color: #fff; }
+.badge.type { background: #666; }
+.badge.protocol { background: #444; }
+.badge.boundary { background: #888; }
+.badge.boundary.public { background: #c00; }
+.badge.boundary.internal { background: #060; }
+.badge.boundary.external { background: #555; }
+.badge.stride { min-width: 1.25rem; text-align: center; }
+.feature-card { border: 1px solid #ccc; padding: 1rem; margin-bottom: 1rem; }
+.feature-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.feature-header h3 { font-size: 1.1rem; }
+.last-updated { font-size: 0.8rem; color: #666; }
+.feature-goal { color: #444; margin-bottom: 0.75rem; }
+.feature-meta { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; font-size: 0.9rem; }
+.meta-item { background: #f5f5f5; padding: 0.4rem 0.6rem; }
+.threat-mappings h4 { font-size: 0.9rem; margin-bottom: 0.5rem; color: #444; }
+.threat-mapping { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 0.75rem; padding: 0.75rem; background: #f9f9f9; margin-bottom: 0.5rem; border-left: 3px solid #ccc; }
+.threat-id { font-weight: bold; min-width: 180px; }
+.mapping-arrow { color: #666; line-height: 1.6; }
+.mitigations-list { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+.mitigation-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; font-size: 0.9rem; padding: 0.25rem 0.4rem; background: #fff; border-radius: 3px; }
+.mitigation-item code { white-space: nowrap; font-weight: 600; }
+.mit-desc { color: #333; }
+.mit-refs { display: block; width: 100%; margin-top: 0.15rem; padding-left: 3.5rem; }
+.actor-item { padding: 0.5rem; background: #f5f5f5; margin-bottom: 0.4rem; font-size: 0.9rem; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1.5rem; }
+footer { text-align: center; padding: 1.5rem; color: #666; font-size: 0.85rem; border-top: 1px solid #ccc; margin-top: 2rem; }
+@media (max-width: 768px) {
+  .container { padding: 1rem; }
+  header h1 { font-size: 1.5rem; }
+  .two-col { grid-template-columns: 1fr; }
+  table { font-size: 0.8rem; }
+  th, td { padding: 0.4rem; }
+}
+@media print {
+  body { font-size: 11pt; }
+  .container { max-width: none; padding: 0; }
+  section { page-break-inside: avoid; }
+  .diagram-toolbar { display: none; }
+  #cy { height: auto; min-height: 0; border: none; }
+  #diagram-legend { position: static; box-shadow: none; }
+  #node-info { display: none !important; }
+}
+</style>
+</head>
+<body>
+    <header><div class="container">
+        <h1>TMDD CLI</h1>
+        <p class="subtitle">Threat Model Report &bull; Threat Modeling Driven Development - a Python CLI tool that manages YAML-based threat models, validates cross-references, generates AI prompts, and produces interactive HTML reports and diagrams</p>
+    </div></header>
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card"><div class="number">8</div><div class="label">Components</div></div>
+            <div class="stat-card"><div class="number">12</div><div class="label">Data Flows</div></div>
+            <div class="stat-card"><div class="number">6</div><div class="label">Features</div></div>
+            <div class="stat-card"><div class="number">10</div><div class="label">Threats</div></div>
+            <div class="stat-card"><div class="number">11</div><div class="label">Mitigations</div></div>
+            <div class="stat-card"><div class="number">10</div><div class="label">Active Threats</div></div>
+        </div>
+
+        <section><h2>System Diagram</h2>
+            <div class="diagram-toolbar">  <button onclick="_cyFit()" title="Fit to screen">Fit</button>  <button onclick="_cyZoomIn()" title="Zoom in">+</button>  <button onclick="_cyZoomOut()" title="Zoom out">&minus;</button>  <button onclick="_cyReset()" title="Re-run layout">Reset Layout</button>  <span class="diagram-hint">Scroll to zoom &middot; Drag to pan &middot; Click nodes for details</span></div><div id="cy-wrapper">  <div id="cy"></div>  <div id="diagram-legend"></div>  <div id="node-info"></div>  <div id="feature-panel"></div></div><script id="diagram-data" type="application/json">{"nodes": [{"data": {"id": "_grp_actors", "label": "Actors", "nodeType": "boundary", "borderColor": "#95a5a6"}}, {"data": {"id": "developer", "label": "Developer", "nodeType": "actor", "parent": "_grp_actors", "description": "Developer or security engineer who runs TMDD CLI commands (init, lint, feature, compile) and edits .tmdd/ YAML files"}}, {"data": {"id": "ai_agent", "label": "Ai Agent", "nodeType": "actor", "parent": "_grp_actors", "description": "AI coding agent that consumes generated prompt files (.tmdd/out/*.prompt.txt, *.threatmodel.txt) to produce threat models or secure code"}}, {"data": {"id": "report_viewer", "label": "Report Viewer", "nodeType": "actor", "parent": "_grp_actors", "description": "Person viewing generated HTML reports and diagrams in a web browser, potentially including non-developers or stakeholders"}}, {"data": {"id": "_grp_internal", "label": "Trust: internal", "nodeType": "boundary", "borderColor": "#3498db"}}, {"data": {"id": "cli_core", "label": "cli_core", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "Argparse-based CLI entry point that parses user commands and dispatches to command handlers (src/cli.py, src/__main__.py)", "technology": "Python / argparse"}}, {"data": {"id": "command_engine", "label": "command_engine", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "Command handlers for init, lint, feature, and compile operations (src/commands/)", "technology": "Python"}}, {"data": {"id": "yaml_processor", "label": "yaml_processor", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "YAML loading via yaml.safe_load(), threat model assembly, and cross-reference validation (src/utils.py, src/commands/lint.py)", "technology": "Python / PyYAML (safe_load)"}}, {"data": {"id": "prompt_generator", "label": "prompt_generator", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "Generates AI prompt text files for threat modeling and secure coding workflows (src/generators/threat_prompt.py, agent_prompt.py)", "technology": "Python"}}, {"data": {"id": "template_store", "label": "template_store", "nodeType": "other", "parent": "_grp_internal", "bgColor": "#bdc3c7", "shape": "rectangle", "description": "Bundled YAML template files (minimal, web-app, api) used by init command for project scaffolding (src/templates/)", "technology": "YAML files"}}, {"data": {"id": "html_renderer", "label": "html_renderer", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "Generates interactive HTML reports and architecture diagrams with embedded Cytoscape.js (report.py, diagram.py)", "technology": "Python / HTML / JavaScript"}}, {"data": {"id": "filesystem_store", "label": "filesystem_store", "nodeType": "other", "parent": "_grp_internal", "bgColor": "#bdc3c7", "shape": "rectangle", "description": "Local filesystem storage for .tmdd/ YAML files, generated prompts, reports, and diagrams (.tmdd/, .tmdd/out/)", "technology": "Local filesystem"}}, {"data": {"id": "_grp_external", "label": "Trust: external", "nodeType": "boundary", "borderColor": "#9b59b6"}}, {"data": {"id": "cdn_libraries", "label": "cdn_libraries", "nodeType": "external", "parent": "_grp_external", "bgColor": "#95a5a6", "shape": "diamond", "description": "External CDN (unpkg.com) serving Cytoscape.js 3.30.4, dagre 0.8.5, and cytoscape-dagre 2.5.0 loaded client-side in generated HTML", "technology": "unpkg.com CDN / JavaScript"}}], "edges": [{"data": {"id": "e_df_developer_to_cli", "source": "developer", "target": "cli_core", "label": "stdin", "edgeColor": "#e74c3c", "flowId": "df_developer_to_cli", "features": ["Project Initialization", "Threat Model Validation", "Feature Workflow", "Compilation"], "description": "CLI commands with arguments (path, feature name, description, template name)"}}, {"data": {"id": "e_df_cli_to_commands", "source": "cli_core", "target": "command_engine", "label": "function_call", "edgeColor": "#e74c3c", "flowId": "df_cli_to_commands", "features": ["Project Initialization", "Threat Model Validation", "Feature Workflow", "Compilation"], "description": "Parsed argparse Namespace object with user-provided values"}}, {"data": {"id": "e_df_commands_to_yaml", "source": "command_engine", "target": "yaml_processor", "label": "function_call", "edgeColor": "#3498db", "flowId": "df_commands_to_yaml", "features": ["Threat Model Validation", "Feature Workflow", "Compilation", "Report Generation", "Diagram Generation"], "description": "File paths to load; returns parsed YAML dicts (system, actors, components, threats, mitigations)"}}, {"data": {"id": "e_df_yaml_to_filesystem", "source": "yaml_processor", "target": "filesystem_store", "label": "filesystem", "edgeColor": "#3498db", "flowId": "df_yaml_to_filesystem", "features": ["Threat Model Validation", "Feature Workflow", "Compilation", "Report Generation", "Diagram Generation"], "description": "Read .tmdd/ YAML files (system.yaml, actors.yaml, components.yaml, features.yaml, data_flows.yaml, threats/*.yaml)"}}, {"data": {"id": "e_df_init_templates", "source": "template_store", "target": "filesystem_store", "label": "filesystem", "edgeColor": "#e74c3c", "flowId": "df_init_templates", "features": ["Project Initialization"], "description": "Template YAML files with {{name}} and {{description}} placeholders substituted with user input, written to target directory"}}, {"data": {"id": "e_df_commands_to_prompts", "source": "command_engine", "target": "prompt_generator", "label": "function_call", "edgeColor": "#2ecc71", "flowId": "df_commands_to_prompts", "features": ["Feature Workflow", "Compilation"], "description": "Loaded threat model dict and feature metadata for prompt generation"}}, {"data": {"id": "e_df_prompts_to_filesystem", "source": "prompt_generator", "target": "filesystem_store", "label": "filesystem", "edgeColor": "#2ecc71", "flowId": "df_prompts_to_filesystem", "features": ["Feature Workflow", "Compilation"], "description": "Generated text prompt files (*.threatmodel.txt, *.prompt.txt) written to .tmdd/out/"}}, {"data": {"id": "e_df_commands_to_html", "source": "command_engine", "target": "html_renderer", "label": "function_call", "edgeColor": "#f39c12", "flowId": "df_commands_to_html", "features": ["Report Generation", "Diagram Generation"], "description": "Loaded threat model dict passed to report/diagram generators"}}, {"data": {"id": "e_df_html_to_filesystem", "source": "html_renderer", "target": "filesystem_store", "label": "filesystem", "edgeColor": "#f39c12", "flowId": "df_html_to_filesystem", "features": ["Report Generation", "Diagram Generation"], "description": "Generated HTML files (tm.html, diagram.html) with embedded JSON data and JavaScript, written to .tmdd/out/"}}, {"data": {"id": "e_df_cdn_to_browser", "source": "cdn_libraries", "target": "report_viewer", "label": "HTTPS", "edgeColor": "#f39c12", "flowId": "df_cdn_to_browser", "features": ["Report Generation", "Diagram Generation"], "description": "JavaScript libraries (cytoscape.min.js, dagre.min.js, cytoscape-dagre.js) loaded via script tags from unpkg.com"}}, {"data": {"id": "e_df_filesystem_to_viewer", "source": "filesystem_store", "target": "report_viewer", "label": "filesystem", "edgeColor": "#f39c12", "flowId": "df_filesystem_to_viewer", "features": ["Report Generation", "Diagram Generation"], "description": "HTML report/diagram files served to browser with embedded threat model data in JSON format"}}, {"data": {"id": "e_df_filesystem_to_agent", "source": "filesystem_store", "target": "ai_agent", "label": "filesystem", "edgeColor": "#2ecc71", "flowId": "df_filesystem_to_agent", "features": ["Feature Workflow"], "description": "Generated prompt text files consumed by AI agent for threat modeling or secure code generation"}}], "legend": [{"name": "Project Initialization", "color": "#e74c3c", "goal": "Scaffold a new TMDD threat model project from a template (minimal, web-app, or api)", "flows": ["df_developer_to_cli", "df_cli_to_commands", "df_init_templates"], "threats": [{"id": "T001", "name": "YAML template injection via init command name/description", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "M001", "description": "Escape or quote user-provided name/description values before substituting into YAML templates during init, using yaml.dump() or proper YAML string quoting to prevent structural injection"}]}, {"id": "T006", "name": "Arbitrary file creation via init command path argument", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "M007", "description": "Validate and normalize the target path in init command, ensuring it resolves to a subdirectory of the current working directory or an explicitly allowed location"}]}, {"id": "T007", "name": "Information disclosure via generated output files", "severity": "medium", "stride": "I", "mode": "default", "mitigations": [{"id": "M008", "description": "Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis"}]}]}, {"name": "Threat Model Validation", "color": "#3498db", "goal": "Validate all .tmdd/ YAML files for structural correctness and cross-reference integrity", "flows": ["df_developer_to_cli", "df_cli_to_commands", "df_commands_to_yaml", "df_yaml_to_filesystem"], "threats": [{"id": "T005", "name": "Denial of service via deeply nested or oversized YAML files", "severity": "low", "stride": "D", "mode": "default", "mitigations": [{"id": "M006", "description": "Add file size checks in load_yaml() before parsing, rejecting YAML files exceeding a reasonable threshold (e.g., 1MB) to prevent resource exhaustion"}]}, {"id": "T008", "name": "No audit trail for threat model modifications", "severity": "medium", "stride": "R", "mode": "accepted", "mitigations": []}]}, {"name": "Feature Workflow", "color": "#2ecc71", "goal": "Generate AI prompts for threat modeling new features or producing secure implementation guidance", "flows": ["df_developer_to_cli", "df_cli_to_commands", "df_commands_to_yaml", "df_yaml_to_filesystem", "df_commands_to_prompts", "df_prompts_to_filesystem", "df_filesystem_to_agent"], "threats": [{"id": "T009", "name": "Prompt injection via threat model content in generated AI prompts", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "M010", "description": "Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content"}]}, {"id": "T007", "name": "Information disclosure via generated output files", "severity": "medium", "stride": "I", "mode": "default", "mitigations": [{"id": "M008", "description": "Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis"}]}]}, {"name": "Compilation", "color": "#9b59b6", "goal": "Generate consolidated YAML and AI implementation prompts from the full threat model", "flows": ["df_developer_to_cli", "df_cli_to_commands", "df_commands_to_yaml", "df_yaml_to_filesystem", "df_commands_to_prompts", "df_prompts_to_filesystem"], "threats": [{"id": "T007", "name": "Information disclosure via generated output files", "severity": "medium", "stride": "I", "mode": "default", "mitigations": [{"id": "M008", "description": "Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis"}]}, {"id": "T009", "name": "Prompt injection via threat model content in generated AI prompts", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "M010", "description": "Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content"}]}]}, {"name": "Report Generation", "color": "#f39c12", "goal": "Generate a standalone interactive HTML threat model report with architecture diagram", "flows": ["df_commands_to_yaml", "df_yaml_to_filesystem", "df_commands_to_html", "df_html_to_filesystem", "df_cdn_to_browser", "df_filesystem_to_viewer"], "threats": [{"id": "T002", "name": "Supply chain attack via CDN JavaScript dependencies", "severity": "high", "stride": "T", "mode": "default", "mitigations": [{"id": "M002", "description": "Pin CDN library versions with Subresource Integrity (SRI) hashes on all <script> tags in generated HTML to prevent tampered JavaScript from executing"}, {"id": "M003", "description": "Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing"}]}, {"id": "T003", "name": "Stored XSS via innerHTML in diagram JavaScript", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "M004", "description": "Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction"}, {"id": "M005", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}]}, {"id": "T004", "name": "Stored XSS via innerHTML in node-info panel", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "M004", "description": "Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction"}, {"id": "M005", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}]}, {"id": "T007", "name": "Information disclosure via generated output files", "severity": "medium", "stride": "I", "mode": "default", "mitigations": [{"id": "M008", "description": "Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis"}]}, {"id": "T010", "name": "Script tag breakout in embedded JSON diagram data", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "M005", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}, {"id": "M011", "description": "Enhance _safe_json() to escape additional dangerous characters beyond <\/ including HTML entities and ensure Content-Type is set correctly for embedded JSON data"}]}]}, {"name": "Diagram Generation", "color": "#1abc9c", "goal": "Generate a standalone interactive HTML architecture diagram with optional feature highlighting", "flows": ["df_commands_to_yaml", "df_yaml_to_filesystem", "df_commands_to_html", "df_html_to_filesystem", "df_cdn_to_browser", "df_filesystem_to_viewer"], "threats": [{"id": "T002", "name": "Supply chain attack via CDN JavaScript dependencies", "severity": "high", "stride": "T", "mode": "default", "mitigations": [{"id": "M002", "description": "Pin CDN library versions with Subresource Integrity (SRI) hashes on all <script> tags in generated HTML to prevent tampered JavaScript from executing"}, {"id": "M003", "description": "Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing"}]}, {"id": "T003", "name": "Stored XSS via innerHTML in diagram JavaScript", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "M004", "description": "Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction"}, {"id": "M005", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}]}, {"id": "T004", "name": "Stored XSS via innerHTML in node-info panel", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "M004", "description": "Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction"}, {"id": "M005", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}]}, {"id": "T010", "name": "Script tag breakout in embedded JSON diagram data", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "M005", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}, {"id": "M011", "description": "Enhance _safe_json() to escape additional dangerous characters beyond <\/ including HTML entities and ensure Content-Type is set correctly for embedded JSON data"}]}]}]}</script><script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script><script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script><script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script><script>
+(function () {
+  var dataEl = document.getElementById('diagram-data');
+  if (!dataEl) return;
+  var data = JSON.parse(dataEl.textContent);
+
+  /* --- wait for CDN libs ------------------------------------------------ */
+  if (typeof cytoscape === 'undefined') {
+    document.getElementById('cy').innerHTML =
+      '<p style="padding:2rem;color:#666;">Interactive diagram requires an internet connection.</p>';
+    return;
+  }
+
+  /* Register dagre layout extension */
+  if (typeof cytoscapeDagre === 'function') cytoscapeDagre(cytoscape);
+
+  var layoutOpts = {
+    name: 'dagre',
+    rankDir: 'TB',
+    nodeSep: 50,
+    rankSep: 70,
+    edgeSep: 10,
+    padding: 30,
+    animate: false
+  };
+
+  var cy = window._cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: data.nodes.concat(data.edges),
+    minZoom: 0.15,
+    maxZoom: 4,
+    wheelSensitivity: 0.25,
+    boxSelectionEnabled: false,
+
+    style: [
+      /* ----- compound / boundary nodes --------------------------------- */
+      {
+        selector: 'node[nodeType="boundary"]',
+        style: {
+          'shape': 'round-rectangle',
+          'background-color': '#f4f5f7',
+          'background-opacity': 0.35,
+          'border-width': 2,
+          'border-style': 'dashed',
+          'border-color': 'data(borderColor)',
+          'label': 'data(label)',
+          'text-valign': 'top',
+          'text-halign': 'center',
+          'font-size': '13px',
+          'font-weight': 'bold',
+          'color': '#555',
+          'padding': '24px',
+          'text-margin-y': -5
+        }
+      },
+      /* ----- actor nodes ----------------------------------------------- */
+      {
+        selector: 'node[nodeType="actor"]',
+        style: {
+          'shape': 'ellipse',
+          'background-color': '#ecf0f1',
+          'border-width': 1.5,
+          'border-color': '#bdc3c7',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '11px',
+          'color': '#2c3e50',
+          'width': 'label',
+          'height': 'label',
+          'padding': '14px',
+          'text-wrap': 'wrap',
+          'text-max-width': '90px'
+        }
+      },
+      /* ----- component nodes (generic) --------------------------------- */
+      {
+        selector: 'node[nodeType!="boundary"][nodeType!="actor"]',
+        style: {
+          'shape': 'data(shape)',
+          'background-color': 'data(bgColor)',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '11px',
+          'color': '#fff',
+          'text-outline-width': 1,
+          'text-outline-color': 'data(bgColor)',
+          'width': 'label',
+          'height': 'label',
+          'padding': '14px',
+          'text-wrap': 'wrap',
+          'text-max-width': '110px',
+          'border-width': 0
+        }
+      },
+      /* ----- edges ----------------------------------------------------- */
+      {
+        selector: 'edge',
+        style: {
+          'width': 2,
+          'line-color': 'data(edgeColor)',
+          'target-arrow-color': 'data(edgeColor)',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'label': 'data(label)',
+          'font-size': '9px',
+          'color': '#555',
+          'text-background-color': '#fff',
+          'text-background-opacity': 0.85,
+          'text-background-padding': '2px',
+          'arrow-scale': 1.2
+        }
+      },
+      /* ----- hover / selected states ----------------------------------- */
+      {
+        selector: 'node:active, node:selected',
+        style: {
+          'overlay-color': '#2980b9',
+          'overlay-opacity': 0.12,
+          'border-width': 3,
+          'border-color': '#2980b9'
+        }
+      },
+      {
+        selector: 'edge:selected',
+        style: { 'width': 4, 'overlay-opacity': 0.08 }
+      }
+    ],
+
+    layout: layoutOpts
+  });
+
+  /* ----- Severity / STRIDE colour maps --------------------------------- */
+  var sevColors = { critical: '#dc2626', high: '#ea580c', medium: '#ca8a04', low: '#65a30d' };
+  var strideColors = { S: '#8b5cf6', T: '#ef4444', R: '#f97316', I: '#3b82f6', D: '#6b7280', E: '#ec4899' };
+
+  /* ----- Info panel on tap --------------------------------------------- */
+  var info = document.getElementById('node-info');
+  var fpanel = document.getElementById('feature-panel');
+
+  cy.on('tap', 'node[nodeType!="boundary"]', function (evt) {
+    if (fpanel.style.display === 'block') return;
+    var d = evt.target.data();
+    var h = '<strong>' + d.label + '</strong>';
+    if (d.description) h += '<div>' + d.description + '</div>';
+    if (d.technology) h += '<div><span class="info-label">Tech:</span> ' + d.technology + '</div>';
+    if (d.nodeType && d.nodeType !== 'actor')
+      h += '<div><span class="info-label">Type:</span> ' + d.nodeType + '</div>';
+    info.innerHTML = h;
+    info.style.display = 'block';
+  });
+
+  cy.on('tap', 'edge', function (evt) {
+    if (fpanel.style.display === 'block') return;
+    var d = evt.target.data();
+    var h = '<strong>' + d.flowId + '</strong>';
+    if (d.label) h += ' <code>' + d.label + '</code>';
+    if (d.description) h += '<div>' + d.description + '</div>';
+    if (d.features && d.features.length)
+      h += '<div><span class="info-label">Features:</span> ' + d.features.join(', ') + '</div>';
+    info.innerHTML = h;
+    info.style.display = 'block';
+  });
+
+  cy.on('tap', function (evt) {
+    if (evt.target === cy) {
+      info.style.display = 'none';
+      clearFeatureHighlight();
+    }
+  });
+
+  /* ----- Feature highlight + threat panel ------------------------------ */
+  var activeFeature = null;
+
+  function clearFeatureHighlight() {
+    activeFeature = null;
+    fpanel.style.display = 'none';
+    info.style.display = 'none';
+    cy.elements().removeClass('dimmed');
+    cy.edges().style({ 'opacity': 1, 'width': 2 });
+    cy.nodes().style({ 'opacity': 1 });
+    document.querySelectorAll('.legend-item').forEach(function (el) { el.classList.remove('active'); });
+  }
+
+  function showFeature(feat, idx) {
+    if (activeFeature === feat.name) { clearFeatureHighlight(); return; }
+    activeFeature = feat.name;
+    info.style.display = 'none';
+
+    /* Dim all edges, then highlight matching ones */
+    cy.edges().style({ 'opacity': 0.1, 'width': 1 });
+    cy.nodes('[nodeType!="boundary"]').style({ 'opacity': 0.35 });
+    var flowSet = {};
+    (feat.flows || []).forEach(function (f) { flowSet[f] = true; });
+    var touchedNodes = {};
+    cy.edges().forEach(function (edge) {
+      if (flowSet[edge.data('flowId')]) {
+        edge.style({ 'opacity': 1, 'width': 3 });
+        touchedNodes[edge.data('source')] = true;
+        touchedNodes[edge.data('target')] = true;
+      }
+    });
+    cy.nodes().forEach(function (n) {
+      if (touchedNodes[n.data('id')] || n.data('nodeType') === 'boundary') {
+        n.style({ 'opacity': 1 });
+      }
+    });
+
+    /* Mark active legend item */
+    document.querySelectorAll('.legend-item').forEach(function (el, i) {
+      el.classList.toggle('active', i === idx);
+    });
+
+    /* Build threat detail panel */
+    var h = '<div class="fp-header">' +
+      '<span class="fp-dot" style="background:' + feat.color + '"></span>' +
+      '<strong>' + feat.name + '</strong>' +
+      '<button class="fp-close" onclick="clearFeatureHighlight()" title="Close">&times;</button>' +
+      '</div><div class="fp-body">';
+    if (feat.goal) h += '<div class="fp-goal">' + feat.goal + '</div>';
+
+    /* Data flows */
+    if (feat.flows && feat.flows.length) {
+      h += '<div class="fp-section"><div class="fp-section-title">Data Flows</div>' +
+        '<div class="fp-flows">';
+      feat.flows.forEach(function (f) { h += '<code>' + f + '</code>'; });
+      h += '</div></div>';
+    }
+
+    /* Threats */
+    var threats = feat.threats || [];
+    if (threats.length) {
+      h += '<div class="fp-section"><div class="fp-section-title">Threats (' + threats.length + ')</div>';
+      threats.forEach(function (t) {
+        var sc = sevColors[t.severity] || '#6b7280';
+        var stc = strideColors[t.stride] || '#6b7280';
+        h += '<div class="fp-threat" style="border-left-color:' + sc + '">' +
+          '<div class="fp-threat-head">' +
+          '<code>' + t.id + '</code> ' +
+          '<span class="sev" style="background:' + sc + '">' + t.severity.toUpperCase() + '</span> ' +
+          '<span class="stride-tag" style="background:' + stc + '">' + t.stride + '</span> ' +
+          '<span>' + t.name + '</span></div>';
+        if (t.mode === 'accepted') {
+          h += '<div class="fp-mit"><span class="fp-mode">Risk accepted</span></div>';
+        } else if (t.mode === 'unmapped') {
+          h += '<div class="fp-mit"><span class="fp-mode">Mitigations not yet mapped</span></div>';
+        } else {
+          (t.mitigations || []).forEach(function (m) {
+            h += '<div class="fp-mit"><code>' + m.id + '</code> ' + m.description + '</div>';
+          });
+          if (t.mode === 'default')
+            h += '<div class="fp-mit"><span class="fp-mode">(from catalog defaults)</span></div>';
+        }
+        h += '</div>';
+      });
+      h += '</div>';
+    } else {
+      h += '<div class="fp-section"><div class="fp-section-title">Threats</div>' +
+        '<div style="color:#999;font-style:italic;">No threats mapped</div></div>';
+    }
+    h += '</div>';
+    fpanel.innerHTML = h;
+    fpanel.style.display = 'block';
+  }
+  window.clearFeatureHighlight = clearFeatureHighlight;
+
+  /* ----- Legend (clickable) --------------------------------------------- */
+  var legendEl = document.getElementById('diagram-legend');
+  if (data.legend && data.legend.length && legendEl) {
+    var lh = '<div class="legend-title">Features <span style="font-weight:normal;font-size:0.85em;color:#aaa;">(click to inspect)</span></div>';
+    data.legend.forEach(function (it, idx) {
+      lh += '<div class="legend-item" data-idx="' + idx + '">' +
+        '<span class="legend-dot" style="background:' + it.color + '"></span>' +
+        it.name + '</div>';
+    });
+    legendEl.innerHTML = lh;
+    legendEl.querySelectorAll('.legend-item').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var i = parseInt(this.getAttribute('data-idx'));
+        showFeature(data.legend[i], i);
+      });
+    });
+  }
+
+  /* ----- Toolbar handlers ---------------------------------------------- */
+  window._cyFit    = function () { cy.fit(null, 30); };
+  window._cyZoomIn = function () {
+    cy.zoom({ level: cy.zoom() * 1.3,
+              renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  };
+  window._cyZoomOut = function () {
+    cy.zoom({ level: cy.zoom() / 1.3,
+              renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  };
+  window._cyReset = function () {
+    cy.layout(layoutOpts).run();
+    setTimeout(function () { cy.fit(null, 30); }, 50);
+  };
+})();
+</script>
+        </section>
+
+        <section><h2>Features</h2>
+            <div class="feature-card"><div class="feature-header"><h3>Project Initialization</h3></div><p class="feature-goal">Scaffold a new TMDD threat model project from a template (minimal, web-app, or api)</p><div class="feature-meta"><div class="meta-item"><strong>Input Data:</strong> <code>path, system name, description, template name</code></div>
+<div class="meta-item"><strong>Output Data:</strong> <code>YAML files in target directory</code></div>
+<div class="meta-item"><strong>Data Flows:</strong> <code>df_developer_to_cli, df_cli_to_commands, df_init_templates</code></div>
+<div class="meta-item"><strong>Threat Actors:</strong> <code>TA003</code></div></div><div class="threat-mappings"><h4>Threat &rarr; Mitigation Mappings</h4><div class="threat-mapping"><div class="threat-id" style="border-color:#65a30d"><code>T001</code> YAML template injection via init command name/description</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M001</code><span class="mit-desc">Escape or quote user-provided name/description values before substituting into YAML templates during init, using yaml.dump() or proper YAML string quoting to prevent structural injection</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code><span style="color:#888;">:36-39</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#65a30d"><code>T006</code> Arbitrary file creation via init command path argument</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M007</code><span class="mit-desc">Validate and normalize the target path in init command, ensuring it resolves to a subdirectory of the current working directory or an explicitly allowed location</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code><span style="color:#888;">:22-23</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T007</code> Information disclosure via generated output files</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M008</code><span class="mit-desc">Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div></div></div>
+<div class="feature-card"><div class="feature-header"><h3>Threat Model Validation</h3></div><p class="feature-goal">Validate all .tmdd/ YAML files for structural correctness and cross-reference integrity</p><div class="feature-meta"><div class="meta-item"><strong>Input Data:</strong> <code>path to .tmdd directory</code></div>
+<div class="meta-item"><strong>Output Data:</strong> <code>validation results on stdout</code></div>
+<div class="meta-item"><strong>Data Flows:</strong> <code>df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem</code></div>
+<div class="meta-item"><strong>Threat Actors:</strong> <code>TA002</code></div></div><div class="threat-mappings"><h4>Threat &rarr; Mitigation Mappings</h4><div class="threat-mapping"><div class="threat-id" style="border-color:#65a30d"><code>T005</code> Denial of service via deeply nested or oversized YAML files</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M006</code><span class="mit-desc">Add file size checks in load_yaml() before parsing, rejecting YAML files exceeding a reasonable threshold (e.g., 1MB) to prevent resource exhaustion</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/utils.py</code><span style="color:#888;">:101-117</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T008</code> No audit trail for threat model modifications</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>accepted</code><span class="mit-desc">Risk accepted</span></div></div></div></div></div>
+<div class="feature-card"><div class="feature-header"><h3>Feature Workflow</h3></div><p class="feature-goal">Generate AI prompts for threat modeling new features or producing secure implementation guidance</p><div class="feature-meta"><div class="meta-item"><strong>Input Data:</strong> <code>feature name, description, loaded threat model</code></div>
+<div class="meta-item"><strong>Output Data:</strong> <code>prompt text files in .tmdd/out/</code></div>
+<div class="meta-item"><strong>Data Flows:</strong> <code>df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem, df_filesystem_to_agent</code></div>
+<div class="meta-item"><strong>Threat Actors:</strong> <code>TA002</code></div></div><div class="threat-mappings"><h4>Threat &rarr; Mitigation Mappings</h4><div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T009</code> Prompt injection via threat model content in generated AI prompts</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M010</code><span class="mit-desc">Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/generators/agent_prompt.py</code><span style="color:#888;">:17-19</span>, <code>src/generators/threat_prompt.py</code>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T007</code> Information disclosure via generated output files</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M008</code><span class="mit-desc">Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div></div></div>
+<div class="feature-card"><div class="feature-header"><h3>Compilation</h3></div><p class="feature-goal">Generate consolidated YAML and AI implementation prompts from the full threat model</p><div class="feature-meta"><div class="meta-item"><strong>Input Data:</strong> <code>path to .tmdd directory, optional feature filter</code></div>
+<div class="meta-item"><strong>Output Data:</strong> <code>consolidated .tm.yaml file, prompt text file in .tmdd/out/</code></div>
+<div class="meta-item"><strong>Data Flows:</strong> <code>df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem</code></div>
+<div class="meta-item"><strong>Threat Actors:</strong> <code>TA002</code></div></div><div class="threat-mappings"><h4>Threat &rarr; Mitigation Mappings</h4><div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T007</code> Information disclosure via generated output files</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M008</code><span class="mit-desc">Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T009</code> Prompt injection via threat model content in generated AI prompts</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M010</code><span class="mit-desc">Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/generators/agent_prompt.py</code><span style="color:#888;">:17-19</span>, <code>src/generators/threat_prompt.py</code>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div></div></div>
+<div class="feature-card"><div class="feature-header"><h3>Report Generation</h3></div><p class="feature-goal">Generate a standalone interactive HTML threat model report with architecture diagram</p><div class="feature-meta"><div class="meta-item"><strong>Input Data:</strong> <code>path to .tmdd directory</code></div>
+<div class="meta-item"><strong>Output Data:</strong> <code>HTML report file with embedded Cytoscape.js diagram</code></div>
+<div class="meta-item"><strong>Data Flows:</strong> <code>df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer</code></div>
+<div class="meta-item"><strong>Threat Actors:</strong> <code>TA001, TA002</code></div></div><div class="threat-mappings"><h4>Threat &rarr; Mitigation Mappings</h4><div class="threat-mapping"><div class="threat-id" style="border-color:#ea580c"><code>T002</code> Supply chain attack via CDN JavaScript dependencies</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M002</code><span class="mit-desc">Pin CDN library versions with Subresource Integrity (SRI) hashes on all &lt;script&gt; tags in generated HTML to prevent tampered JavaScript from executing</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:893-898</span>, <code>diagram.py</code><span style="color:#888;">:140-143</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div>
+<div class="mitigation-item"><code>M003</code><span class="mit-desc">Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:893-898</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T003</code> Stored XSS via innerHTML in diagram JavaScript</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M004</code><span class="mit-desc">Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div>
+<div class="mitigation-item"><code>M005</code><span class="mit-desc">Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T004</code> Stored XSS via innerHTML in node-info panel</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M004</code><span class="mit-desc">Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div>
+<div class="mitigation-item"><code>M005</code><span class="mit-desc">Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T007</code> Information disclosure via generated output files</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M008</code><span class="mit-desc">Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#65a30d"><code>T010</code> Script tag breakout in embedded JSON diagram data</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M005</code><span class="mit-desc">Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div>
+<div class="mitigation-item"><code>M011</code><span class="mit-desc">Enhance _safe_json() to escape additional dangerous characters beyond &lt;/ including HTML entities and ensure Content-Type is set correctly for embedded JSON data</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:113-114</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div></div></div>
+<div class="feature-card"><div class="feature-header"><h3>Diagram Generation</h3></div><p class="feature-goal">Generate a standalone interactive HTML architecture diagram with optional feature highlighting</p><div class="feature-meta"><div class="meta-item"><strong>Input Data:</strong> <code>path to .tmdd directory, optional feature name</code></div>
+<div class="meta-item"><strong>Output Data:</strong> <code>HTML diagram file with embedded Cytoscape.js visualization</code></div>
+<div class="meta-item"><strong>Data Flows:</strong> <code>df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer</code></div>
+<div class="meta-item"><strong>Threat Actors:</strong> <code>TA001, TA002</code></div></div><div class="threat-mappings"><h4>Threat &rarr; Mitigation Mappings</h4><div class="threat-mapping"><div class="threat-id" style="border-color:#ea580c"><code>T002</code> Supply chain attack via CDN JavaScript dependencies</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M002</code><span class="mit-desc">Pin CDN library versions with Subresource Integrity (SRI) hashes on all &lt;script&gt; tags in generated HTML to prevent tampered JavaScript from executing</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:893-898</span>, <code>diagram.py</code><span style="color:#888;">:140-143</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div>
+<div class="mitigation-item"><code>M003</code><span class="mit-desc">Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:893-898</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T003</code> Stored XSS via innerHTML in diagram JavaScript</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M004</code><span class="mit-desc">Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div>
+<div class="mitigation-item"><code>M005</code><span class="mit-desc">Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#ca8a04"><code>T004</code> Stored XSS via innerHTML in node-info panel</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M004</code><span class="mit-desc">Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div>
+<div class="mitigation-item"><code>M005</code><span class="mit-desc">Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div>
+<div class="threat-mapping"><div class="threat-id" style="border-color:#65a30d"><code>T010</code> Script tag breakout in embedded JSON diagram data</div><div class="mapping-arrow">&rarr;</div><div class="mitigations-list"><div class="mitigation-item"><code>M005</code><span class="mit-desc">Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div>
+<div class="mitigation-item"><code>M011</code><span class="mit-desc">Enhance _safe_json() to escape additional dangerous characters beyond &lt;/ including HTML entities and ensure Content-Type is set correctly for embedded JSON data</span><span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:113-114</span>)</span><span style="color:#999;font-size:0.8em;"> (default)</span></div></div></div></div></div>
+        </section>
+
+        <section><h2>Components</h2><div style="overflow-x:auto;">
+            <table><thead><tr><th>ID</th><th>Description</th><th>Type</th><th>Technology</th><th>Trust Boundary</th></tr></thead>
+            <tbody><tr><td><code>cli_core</code></td><td>Argparse-based CLI entry point that parses user commands and dispatches to command handlers (src/cli.py, src/__main__.py)</td><td><span class="badge type">service</span></td><td><code>Python / argparse</code></td><td><span class="badge boundary internal">internal</span></td></tr>
+<tr><td><code>command_engine</code></td><td>Command handlers for init, lint, feature, and compile operations (src/commands/)</td><td><span class="badge type">service</span></td><td><code>Python</code></td><td><span class="badge boundary internal">internal</span></td></tr>
+<tr><td><code>yaml_processor</code></td><td>YAML loading via yaml.safe_load(), threat model assembly, and cross-reference validation (src/utils.py, src/commands/lint.py)</td><td><span class="badge type">service</span></td><td><code>Python / PyYAML (safe_load)</code></td><td><span class="badge boundary internal">internal</span></td></tr>
+<tr><td><code>prompt_generator</code></td><td>Generates AI prompt text files for threat modeling and secure coding workflows (src/generators/threat_prompt.py, agent_prompt.py)</td><td><span class="badge type">service</span></td><td><code>Python</code></td><td><span class="badge boundary internal">internal</span></td></tr>
+<tr><td><code>template_store</code></td><td>Bundled YAML template files (minimal, web-app, api) used by init command for project scaffolding (src/templates/)</td><td><span class="badge type">other</span></td><td><code>YAML files</code></td><td><span class="badge boundary internal">internal</span></td></tr>
+<tr><td><code>html_renderer</code></td><td>Generates interactive HTML reports and architecture diagrams with embedded Cytoscape.js (report.py, diagram.py)</td><td><span class="badge type">service</span></td><td><code>Python / HTML / JavaScript</code></td><td><span class="badge boundary internal">internal</span></td></tr>
+<tr><td><code>filesystem_store</code></td><td>Local filesystem storage for .tmdd/ YAML files, generated prompts, reports, and diagrams (.tmdd/, .tmdd/out/)</td><td><span class="badge type">other</span></td><td><code>Local filesystem</code></td><td><span class="badge boundary internal">internal</span></td></tr>
+<tr><td><code>cdn_libraries</code></td><td>External CDN (unpkg.com) serving Cytoscape.js 3.30.4, dagre 0.8.5, and cytoscape-dagre 2.5.0 loaded client-side in generated HTML</td><td><span class="badge type">external</span></td><td><code>unpkg.com CDN / JavaScript</code></td><td><span class="badge boundary external">external</span></td></tr></tbody></table></div>
+        </section>
+
+        <section><h2>Data Flows</h2><div style="overflow-x:auto;">
+            <table><thead><tr><th>ID</th><th>Path</th><th>Description</th><th>Protocol</th><th>Authentication</th></tr></thead>
+            <tbody><tr class=""><td><code>df_developer_to_cli</code></td><td><code>developer</code> &rarr; <code>cli_core</code></td><td>CLI commands with arguments (path, feature name, description, template name)</td><td><span class="badge protocol">stdin</span></td><td>none</td></tr>
+<tr class=""><td><code>df_cli_to_commands</code></td><td><code>cli_core</code> &rarr; <code>command_engine</code></td><td>Parsed argparse Namespace object with user-provided values</td><td><span class="badge protocol">function_call</span></td><td>none</td></tr>
+<tr class=""><td><code>df_commands_to_yaml</code></td><td><code>command_engine</code> &rarr; <code>yaml_processor</code></td><td>File paths to load; returns parsed YAML dicts (system, actors, components, threats, mitigations)</td><td><span class="badge protocol">function_call</span></td><td>none</td></tr>
+<tr class=""><td><code>df_yaml_to_filesystem</code></td><td><code>yaml_processor</code> &rarr; <code>filesystem_store</code></td><td>Read .tmdd/ YAML files (system.yaml, actors.yaml, components.yaml, features.yaml, data_flows.yaml, threats/*.yaml)</td><td><span class="badge protocol">filesystem</span></td><td>none</td></tr>
+<tr class=""><td><code>df_init_templates</code></td><td><code>template_store</code> &rarr; <code>filesystem_store</code></td><td>Template YAML files with {{name}} and {{description}} placeholders substituted with user input, written to target directory</td><td><span class="badge protocol">filesystem</span></td><td>none</td></tr>
+<tr class=""><td><code>df_commands_to_prompts</code></td><td><code>command_engine</code> &rarr; <code>prompt_generator</code></td><td>Loaded threat model dict and feature metadata for prompt generation</td><td><span class="badge protocol">function_call</span></td><td>none</td></tr>
+<tr class=""><td><code>df_prompts_to_filesystem</code></td><td><code>prompt_generator</code> &rarr; <code>filesystem_store</code></td><td>Generated text prompt files (*.threatmodel.txt, *.prompt.txt) written to .tmdd/out/</td><td><span class="badge protocol">filesystem</span></td><td>none</td></tr>
+<tr class=""><td><code>df_commands_to_html</code></td><td><code>command_engine</code> &rarr; <code>html_renderer</code></td><td>Loaded threat model dict passed to report/diagram generators</td><td><span class="badge protocol">function_call</span></td><td>none</td></tr>
+<tr class=""><td><code>df_html_to_filesystem</code></td><td><code>html_renderer</code> &rarr; <code>filesystem_store</code></td><td>Generated HTML files (tm.html, diagram.html) with embedded JSON data and JavaScript, written to .tmdd/out/</td><td><span class="badge protocol">filesystem</span></td><td>none</td></tr>
+<tr class=""><td><code>df_cdn_to_browser</code></td><td><code>cdn_libraries</code> &rarr; <code>report_viewer</code></td><td>JavaScript libraries (cytoscape.min.js, dagre.min.js, cytoscape-dagre.js) loaded via script tags from unpkg.com</td><td><span class="badge protocol">HTTPS</span></td><td>none</td></tr>
+<tr class=""><td><code>df_filesystem_to_viewer</code></td><td><code>filesystem_store</code> &rarr; <code>report_viewer</code></td><td>HTML report/diagram files served to browser with embedded threat model data in JSON format</td><td><span class="badge protocol">filesystem</span></td><td>none</td></tr>
+<tr class=""><td><code>df_filesystem_to_agent</code></td><td><code>filesystem_store</code> &rarr; <code>ai_agent</code></td><td>Generated prompt text files consumed by AI agent for threat modeling or secure code generation</td><td><span class="badge protocol">filesystem</span></td><td>none</td></tr></tbody></table></div>
+        </section>
+
+        <section><h2>Threat Catalog</h2>
+            <p style="color:#666;margin-bottom:0.75rem;">Faded rows indicate threats not currently mapped to any feature.</p>
+            <div style="overflow-x:auto;">
+            <table><thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Severity</th><th>STRIDE</th><th>CWE</th><th>Suggested Mitigations</th></tr></thead>
+            <tbody><tr class="used"><td><code>T001</code></td><td><strong>YAML template injection via init command name/description</strong></td><td>In src/commands/init.py:36-39, user-provided --name and --description values are substituted into YAML templates using simple str.replace() without escaping YAML metacharacters. A name containing newlines or YAML syntax (e.g., colons, brackets) could produce malformed or structurally altered YAML output files.</td><td><span class="badge" style="background:#65a30d">LOW</span></td><td><span class="badge stride" style="background:#ef4444" title="Tampering">T</span></td><td><code>CWE-74</code></td><td><code>M001</code></td></tr>
+<tr class="used"><td><code>T002</code></td><td><strong>Supply chain attack via CDN JavaScript dependencies</strong></td><td>report.py and diagram.py embed &lt;script&gt; tags loading from unpkg.com (cytoscape@3.30.4, dagre@0.8.5, cytoscape-dagre@2.5.0). If unpkg.com is compromised, a package is hijacked, or a MITM attack occurs, malicious JavaScript would execute in the report viewer&#x27;s browser with full DOM access to the threat model data.</td><td><span class="badge" style="background:#ea580c">HIGH</span></td><td><span class="badge stride" style="background:#ef4444" title="Tampering">T</span></td><td><code>CWE-829</code></td><td><code>M002, M003</code></td></tr>
+<tr class="used"><td><code>T003</code></td><td><strong>Stored XSS via innerHTML in diagram JavaScript</strong></td><td>In report.py&#x27;s _DIAGRAM_JS (line 572+), the showFeature() function builds HTML strings from threat model data (threat names, descriptions, goals) and injects them via innerHTML. Although data passes through JSON.parse from an embedded &lt;script&gt; tag, YAML values containing HTML (e.g., &lt;img onerror=...&gt;) would be rendered as active markup in the viewer&#x27;s browser.</td><td><span class="badge" style="background:#ca8a04">MEDIUM</span></td><td><span class="badge stride" style="background:#ef4444" title="Tampering">T</span></td><td><code>CWE-79</code></td><td><code>M004, M005</code></td></tr>
+<tr class="used"><td><code>T004</code></td><td><strong>Stored XSS via innerHTML in node-info panel</strong></td><td>In report.py&#x27;s _DIAGRAM_JS, the cy.on(&#x27;tap&#x27;) handler for nodes and edges builds HTML strings using d.label, d.description, d.technology, and d.flowId directly, injecting them via info.innerHTML without HTML encoding. Malicious content in YAML component descriptions would execute as JavaScript.</td><td><span class="badge" style="background:#ca8a04">MEDIUM</span></td><td><span class="badge stride" style="background:#ef4444" title="Tampering">T</span></td><td><code>CWE-79</code></td><td><code>M004, M005</code></td></tr>
+<tr class="used"><td><code>T005</code></td><td><strong>Denial of service via deeply nested or oversized YAML files</strong></td><td>yaml.safe_load() in src/utils.py:110 parses YAML files without size limits. An extremely large or deeply nested YAML file in .tmdd/ could cause excessive memory consumption or CPU usage during lint, compile, or feature operations.</td><td><span class="badge" style="background:#65a30d">LOW</span></td><td><span class="badge stride" style="background:#6b7280" title="Denial of Service">D</span></td><td><code>CWE-400</code></td><td><code>M006</code></td></tr>
+<tr class="used"><td><code>T006</code></td><td><strong>Arbitrary file creation via init command path argument</strong></td><td>In src/commands/init.py:23, Path(args.path).mkdir(parents=True) creates directories at any user-specified path. Combined with template file writing (line 34-40), a script or CI pipeline invoking tmdd init with a crafted path could create files in unintended locations.</td><td><span class="badge" style="background:#65a30d">LOW</span></td><td><span class="badge stride" style="background:#ef4444" title="Tampering">T</span></td><td><code>CWE-22</code></td><td><code>M007</code></td></tr>
+<tr class="used"><td><code>T007</code></td><td><strong>Information disclosure via generated output files</strong></td><td>Compiled YAML (.tmdd/out/*.tm.yaml), HTML reports, and prompt files contain full threat model details including threat descriptions, severity ratings, CWE references, and internal architecture details. If the .tmdd/out/ directory is accidentally committed to a public repository or shared, it exposes the complete attack surface analysis.</td><td><span class="badge" style="background:#ca8a04">MEDIUM</span></td><td><span class="badge stride" style="background:#3b82f6" title="Information Disclosure">I</span></td><td><code>CWE-200</code></td><td><code>M008</code></td></tr>
+<tr class="used"><td><code>T008</code></td><td><strong>No audit trail for threat model modifications</strong></td><td>TMDD stores threat models as plain YAML files with no built-in change tracking, signing, or attribution. Anyone with filesystem access can modify threats, mitigations, or feature mappings without a trace, undermining the integrity of the security assessment.</td><td><span class="badge" style="background:#ca8a04">MEDIUM</span></td><td><span class="badge stride" style="background:#f97316" title="Repudiation">R</span></td><td><code>CWE-778</code></td><td><code>M009</code></td></tr>
+<tr class="used"><td><code>T009</code></td><td><strong>Prompt injection via threat model content in generated AI prompts</strong></td><td>In src/generators/agent_prompt.py and threat_prompt.py, threat model data (threat names, descriptions, mitigation text) is embedded directly into AI prompt text without sanitization. A malicious actor who can edit YAML files could inject adversarial instructions into the prompt that alter the AI agent&#x27;s behavior.</td><td><span class="badge" style="background:#ca8a04">MEDIUM</span></td><td><span class="badge stride" style="background:#ef4444" title="Tampering">T</span></td><td><code>CWE-77</code></td><td><code>M010</code></td></tr>
+<tr class="used"><td><code>T010</code></td><td><strong>Script tag breakout in embedded JSON diagram data</strong></td><td>In report.py:114, _safe_json() escapes &lt;/ to &lt;\/ to prevent script tag breakout. However, other injection vectors (e.g., HTML entities, Unicode escapes) in threat model strings embedded in the &lt;script type=&#x27;application/json&#x27;&gt; block could potentially bypass this single-pattern defense.</td><td><span class="badge" style="background:#65a30d">LOW</span></td><td><span class="badge stride" style="background:#ef4444" title="Tampering">T</span></td><td><code>CWE-79</code></td><td><code>M005, M011</code></td></tr></tbody></table></div>
+        </section>
+
+        <section><h2>Mitigations Catalog</h2>
+            <p style="color:#666;margin-bottom:0.75rem;">Faded rows indicate mitigations not currently applied to any feature.</p>
+            <div style="overflow-x:auto;">
+            <table><thead><tr><th>ID</th><th>Description</th></tr></thead>
+            <tbody><tr class="used"><td><code>M001</code></td><td>Escape or quote user-provided name/description values before substituting into YAML templates during init, using yaml.dump() or proper YAML string quoting to prevent structural injection<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code><span style="color:#888;">:36-39</span>)</span></td></tr>
+<tr class="used"><td><code>M002</code></td><td>Pin CDN library versions with Subresource Integrity (SRI) hashes on all &lt;script&gt; tags in generated HTML to prevent tampered JavaScript from executing<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:893-898</span>, <code>diagram.py</code><span style="color:#888;">:140-143</span>)</span></td></tr>
+<tr class="used"><td><code>M003</code></td><td>Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:893-898</span>)</span></td></tr>
+<tr class="used"><td><code>M004</code></td><td>Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span></td></tr>
+<tr class="used"><td><code>M005</code></td><td>Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:572-872</span>)</span></td></tr>
+<tr class="used"><td><code>M006</code></td><td>Add file size checks in load_yaml() before parsing, rejecting YAML files exceeding a reasonable threshold (e.g., 1MB) to prevent resource exhaustion<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/utils.py</code><span style="color:#888;">:101-117</span>)</span></td></tr>
+<tr class="used"><td><code>M007</code></td><td>Validate and normalize the target path in init command, ensuring it resolves to a subdirectory of the current working directory or an explicitly allowed location<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code><span style="color:#888;">:22-23</span>)</span></td></tr>
+<tr class="used"><td><code>M008</code></td><td>Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/commands/init.py</code>)</span></td></tr>
+<tr class="unused"><td><code>M009</code></td><td>Rely on Git version control for change tracking and attribution of .tmdd/ YAML files; document this requirement in README and generated AGENTS.md</td></tr>
+<tr class="used"><td><code>M010</code></td><td>Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>src/generators/agent_prompt.py</code><span style="color:#888;">:17-19</span>, <code>src/generators/threat_prompt.py</code>)</span></td></tr>
+<tr class="used"><td><code>M011</code></td><td>Enhance _safe_json() to escape additional dangerous characters beyond &lt;/ including HTML entities and ensure Content-Type is set correctly for embedded JSON data<span class="mit-refs" style="font-size:0.8em;color:#666;margin-left:0.25rem;">(<code>report.py</code><span style="color:#888;">:113-114</span>)</span></td></tr></tbody></table></div>
+        </section>
+
+        <div class="two-col">
+            <section><h2>System Actors</h2>
+                <div class="actor-item"><code>developer</code>: Developer or security engineer who runs TMDD CLI commands (init, lint, feature, compile) and edits .tmdd/ YAML files</div>
+<div class="actor-item"><code>ai_agent</code>: AI coding agent that consumes generated prompt files (.tmdd/out/*.prompt.txt, *.threatmodel.txt) to produce threat models or secure code</div>
+<div class="actor-item"><code>report_viewer</code>: Person viewing generated HTML reports and diagrams in a web browser, potentially including non-developers or stakeholders</div>
+            </section>
+            <section><h2>Threat Actors</h2>
+                <div class="actor-item"><code>TA001</code>: External attacker who compromises a CDN or npm package used by TMDD-generated HTML reports</div>
+<div class="actor-item"><code>TA002</code>: Malicious insider with filesystem access who tampers with .tmdd/ YAML files to inject harmful content into reports or AI prompts</div>
+<div class="actor-item"><code>TA003</code>: Automated CI/CD pipeline that invokes TMDD commands with untrusted or user-controlled input parameters</div>
+            </section>
+        </div>
+    </div>
+    <footer><p>Generated by TMDD (Threat Modeling Driven Development) &bull; TMDD CLI</p></footer>
+</body>
+</html>
