@@ -10,7 +10,7 @@ TMDD is a lightweight, YAML-based threat modeling framework designed for modern 
 
 ```bash
 # Clone the repository
-git clone https://github.com/mik0w/tmdd.git
+git clone https://github.com/attasec/tmdd.git
 cd tmdd
 
 # Install
