@@ -1,0 +1,13 @@
+# =============================================================================
+# Actors - Who interacts with the system
+# =============================================================================
+# Actors are people or systems that use your system.
+# ID format: lowercase, a-z, 0-9, underscore only. Start with letter.
+#
+# Add actors as you identify them. Use feature.py to help.
+# =============================================================================
+
+actors:
+  - id: user
+    description: Primary user of the system
+

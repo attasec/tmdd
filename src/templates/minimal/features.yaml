@@ -1,0 +1,18 @@
+# =============================================================================
+# Features - Capabilities of your system
+# =============================================================================
+# Each feature maps to threats and mitigations.
+# Use: python feature.py <dir> "Feature Name" to add new features with AI help.
+#
+# Format:
+#   - name: Feature Name
+#     goal: What this feature accomplishes
+#     data_flows: [df_x_to_y]        # Data flows involved
+#     threats:                        # Threats and their mitigations
+#       T001: default                # Use catalog's suggested_mitigations
+#       T002: [M001, M002]          # Explicit mitigation override
+#       T003: accepted               # Risk accepted
+# =============================================================================
+
+features: []
+

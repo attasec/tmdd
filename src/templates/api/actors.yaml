@@ -1,0 +1,8 @@
+# Actors - API consumers
+actors:
+  - id: api_client
+    description: External application consuming the API
+    
+  - id: internal_service
+    description: Internal microservice calling this API
+

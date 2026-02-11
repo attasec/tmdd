@@ -1,0 +1,91 @@
+# =============================================================================
+# Data Flows - How data moves through the TMDD system
+# =============================================================================
+# Traced from actual code paths in src/cli.py, src/commands/, src/generators/,
+# report.py, and diagram.py
+# =============================================================================
+
+data_flows:
+  - id: df_developer_to_cli
+    source: developer
+    destination: cli_core
+    data_description: "CLI commands with arguments (path, feature name, description, template name)"
+    protocol: stdin
+    authentication: none
+
+  - id: df_cli_to_commands
+    source: cli_core
+    destination: command_engine
+    data_description: "Parsed argparse Namespace object with user-provided values"
+    protocol: function_call
+    authentication: none
+
+  - id: df_commands_to_yaml
+    source: command_engine
+    destination: yaml_processor
+    data_description: "File paths to load; returns parsed YAML dicts (system, actors, components, threats, mitigations)"
+    protocol: function_call
+    authentication: none
+
+  - id: df_yaml_to_filesystem
+    source: yaml_processor
+    destination: filesystem_store
+    data_description: "Read .tmdd/ YAML files (system.yaml, actors.yaml, components.yaml, features.yaml, data_flows.yaml, threats/*.yaml)"
+    protocol: filesystem
+    authentication: none
+
+  - id: df_init_templates
+    source: template_store
+    destination: filesystem_store
+    data_description: "Template YAML files with {{name}} and {{description}} placeholders substituted with user input, written to target directory"
+    protocol: filesystem
+    authentication: none
+
+  - id: df_commands_to_prompts
+    source: command_engine
+    destination: prompt_generator
+    data_description: "Loaded threat model dict and feature metadata for prompt generation"
+    protocol: function_call
+    authentication: none
+
+  - id: df_prompts_to_filesystem
+    source: prompt_generator
+    destination: filesystem_store
+    data_description: "Generated text prompt files (*.threatmodel.txt, *.prompt.txt) written to .tmdd/out/"
+    protocol: filesystem
+    authentication: none
+
+  - id: df_commands_to_html
+    source: command_engine
+    destination: html_renderer
+    data_description: "Loaded threat model dict passed to report/diagram generators"
+    protocol: function_call
+    authentication: none
+
+  - id: df_html_to_filesystem
+    source: html_renderer
+    destination: filesystem_store
+    data_description: "Generated HTML files (tm.html, diagram.html) with embedded JSON data and JavaScript, written to .tmdd/out/"
+    protocol: filesystem
+    authentication: none
+
+  - id: df_cdn_to_browser
+    source: cdn_libraries
+    destination: report_viewer
+    data_description: "JavaScript libraries (cytoscape.min.js, dagre.min.js, cytoscape-dagre.js) loaded via script tags from unpkg.com"
+    protocol: HTTPS
+    authentication: none
+
+  - id: df_filesystem_to_viewer
+    source: filesystem_store
+    destination: report_viewer
+    data_description: "HTML report/diagram files served to browser with embedded threat model data in JSON format"
+    protocol: filesystem
+    authentication: none
+
+  - id: df_filesystem_to_agent
+    source: filesystem_store
+    destination: ai_agent
+    data_description: "Generated prompt text files consumed by AI agent for threat modeling or secure code generation"
+    protocol: filesystem
+    authentication: none

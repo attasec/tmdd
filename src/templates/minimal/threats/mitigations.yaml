@@ -1,0 +1,19 @@
+# =============================================================================
+# Mitigations Catalog - Security controls
+# =============================================================================
+# Reusable mitigation definitions. Reference these in features.yaml.
+# ID format: M followed by digits (M001, M002, etc.)
+#
+# Format (simple):
+#   M001: Description of the security control
+#
+# Format (rich, with optional code references):
+#   M001:
+#     description: Description of the security control
+#     references:
+#       - file: "src/auth/middleware.ts"
+#         lines: "42-58"
+# =============================================================================
+
+mitigations: {}
+

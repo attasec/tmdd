@@ -1,0 +1,5 @@
+# TMDD - Threat Modeling Driven Development
+# Required dependencies
+
+PyYAML>=6.0
+

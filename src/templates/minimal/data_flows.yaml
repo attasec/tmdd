@@ -1,0 +1,16 @@
+# =============================================================================
+# Data Flows - How data moves through the system
+# =============================================================================
+# Data flows connect actors and components.
+# ID format: df_{source}_to_{destination}
+#
+# source/destination must reference valid actor or component IDs.
+# =============================================================================
+
+data_flows:
+  - id: df_user_to_main_service
+    source: user
+    destination: main_service
+    data_description: User requests and responses
+    protocol: HTTPS
+

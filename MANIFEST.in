@@ -1,0 +1,6 @@
+# Include templates and schema
+recursive-include src/templates *.yaml
+include tmdd.schema.json
+include README.md
+include requirements.txt
+

@@ -1,0 +1,12 @@
+# =============================================================================
+# Threat Actors - Who might attack
+# =============================================================================
+# Define potential adversaries. Reference these in features.yaml.
+# ID format: TA followed by digits (TA001, TA002, etc.)
+#
+# Format:
+#   TA001: Description of the threat actor
+# =============================================================================
+
+threat_actors: {}
+

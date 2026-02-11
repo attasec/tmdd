@@ -1,0 +1,22 @@
+# Components - API architecture
+components:
+  - id: api_gateway
+    description: API gateway / load balancer
+    type: api
+    trust_boundary: dmz
+    
+  - id: api_service
+    description: Core API service
+    type: api
+    trust_boundary: internal
+    
+  - id: database
+    description: Primary data store
+    type: database
+    trust_boundary: internal
+    
+  - id: cache
+    description: Redis cache for rate limiting and sessions
+    type: cache
+    trust_boundary: internal
+

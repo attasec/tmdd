@@ -1,0 +1,8 @@
+# Actors - Who interacts with the system
+actors:
+  - id: user
+    description: End user accessing the application via browser
+    
+  - id: admin
+    description: Administrator with elevated privileges
+

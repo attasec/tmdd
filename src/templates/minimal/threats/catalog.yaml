@@ -1,0 +1,12 @@
+# =============================================================================
+# Threat Catalog - What can go wrong
+# =============================================================================
+# Reusable threat definitions. Add threats as you identify them.
+# ID format: T followed by digits (T001, T002, etc.)
+#
+# STRIDE categories: S=Spoofing, T=Tampering, R=Repudiation,
+#                    I=Information Disclosure, D=Denial of Service, E=Elevation
+# =============================================================================
+
+threats: {}
+

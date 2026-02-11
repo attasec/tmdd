@@ -1,0 +1,86 @@
+# =============================================================================
+# Threat Catalog - Threats specific to the TMDD CLI codebase
+# =============================================================================
+# Each threat references specific components, endpoints, or files.
+# =============================================================================
+
+threats:
+  T001:
+    name: "YAML template injection via init command name/description"
+    description: "In src/commands/init.py:36-39, user-provided --name and --description values are substituted into YAML templates using simple str.replace() without escaping YAML metacharacters. A name containing newlines or YAML syntax (e.g., colons, brackets) could produce malformed or structurally altered YAML output files."
+    severity: low
+    stride: T
+    cwe: CWE-74
+    suggested_mitigations: [M001]
+
+  T002:
+    name: "Supply chain attack via CDN JavaScript dependencies"
+    description: "report.py and diagram.py embed <script> tags loading from unpkg.com (cytoscape@3.30.4, dagre@0.8.5, cytoscape-dagre@2.5.0). If unpkg.com is compromised, a package is hijacked, or a MITM attack occurs, malicious JavaScript would execute in the report viewer's browser with full DOM access to the threat model data."
+    severity: high
+    stride: T
+    cwe: CWE-829
+    suggested_mitigations: [M002, M003]
+
+  T003:
+    name: "Stored XSS via innerHTML in diagram JavaScript"
+    description: "In report.py's _DIAGRAM_JS (line 572+), the showFeature() function builds HTML strings from threat model data (threat names, descriptions, goals) and injects them via innerHTML. Although data passes through JSON.parse from an embedded <script> tag, YAML values containing HTML (e.g., <img onerror=...>) would be rendered as active markup in the viewer's browser."
+    severity: medium
+    stride: T
+    cwe: CWE-79
+    suggested_mitigations: [M004, M005]
+
+  T004:
+    name: "Stored XSS via innerHTML in node-info panel"
+    description: "In report.py's _DIAGRAM_JS, the cy.on('tap') handler for nodes and edges builds HTML strings using d.label, d.description, d.technology, and d.flowId directly, injecting them via info.innerHTML without HTML encoding. Malicious content in YAML component descriptions would execute as JavaScript."
+    severity: medium
+    stride: T
+    cwe: CWE-79
+    suggested_mitigations: [M004, M005]
+
+  T005:
+    name: "Denial of service via deeply nested or oversized YAML files"
+    description: "yaml.safe_load() in src/utils.py:110 parses YAML files without size limits. An extremely large or deeply nested YAML file in .tmdd/ could cause excessive memory consumption or CPU usage during lint, compile, or feature operations."
+    severity: low
+    stride: D
+    cwe: CWE-400
+    suggested_mitigations: [M006]
+
+  T006:
+    name: "Arbitrary file creation via init command path argument"
+    description: "In src/commands/init.py:23, Path(args.path).mkdir(parents=True) creates directories at any user-specified path. Combined with template file writing (line 34-40), a script or CI pipeline invoking tmdd init with a crafted path could create files in unintended locations."
+    severity: low
+    stride: T
+    cwe: CWE-22
+    suggested_mitigations: [M007]
+
+  T007:
+    name: "Information disclosure via generated output files"
+    description: "Compiled YAML (.tmdd/out/*.tm.yaml), HTML reports, and prompt files contain full threat model details including threat descriptions, severity ratings, CWE references, and internal architecture details. If the .tmdd/out/ directory is accidentally committed to a public repository or shared, it exposes the complete attack surface analysis."
+    severity: medium
+    stride: I
+    cwe: CWE-200
+    suggested_mitigations: [M008]
+
+  T008:
+    name: "No audit trail for threat model modifications"
+    description: "TMDD stores threat models as plain YAML files with no built-in change tracking, signing, or attribution. Anyone with filesystem access can modify threats, mitigations, or feature mappings without a trace, undermining the integrity of the security assessment."
+    severity: medium
+    stride: R
+    cwe: CWE-778
+    suggested_mitigations: [M009]
+
+  T009:
+    name: "Prompt injection via threat model content in generated AI prompts"
+    description: "In src/generators/agent_prompt.py and threat_prompt.py, threat model data (threat names, descriptions, mitigation text) is embedded directly into AI prompt text without sanitization. A malicious actor who can edit YAML files could inject adversarial instructions into the prompt that alter the AI agent's behavior."
+    severity: medium
+    stride: T
+    cwe: CWE-77
+    suggested_mitigations: [M010]
+
+  T010:
+    name: "Script tag breakout in embedded JSON diagram data"
+    description: "In report.py:114, _safe_json() escapes </ to <\\/ to prevent script tag breakout. However, other injection vectors (e.g., HTML entities, Unicode escapes) in threat model strings embedded in the <script type='application/json'> block could potentially bypass this single-pattern defense."
+    severity: low
+    stride: T
+    cwe: CWE-79
+    suggested_mitigations: [M005, M011]

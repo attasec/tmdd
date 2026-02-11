@@ -1,0 +1,70 @@
+# =============================================================================
+# Features - TMDD CLI capabilities with threat-to-mitigation mappings
+# =============================================================================
+
+features:
+  - name: "Project Initialization"
+    goal: "Create a new TMDD threat model project from a template (minimal, web-app, or api)"
+    input_data: [path, system name, description, template name]
+    output_data: [YAML files in target directory]
+    data_flows: [df_developer_to_cli, df_cli_to_commands, df_init_templates]
+    threat_actors: [TA003]
+    threats:
+      T001: default
+      T006: default
+      T007: default
+
+  - name: "Threat Model Validation"
+    goal: "Validate all .tmdd/ YAML files for structural correctness and cross-reference integrity"
+    input_data: [path to .tmdd directory]
+    output_data: [validation results on stdout]
+    data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem]
+    threat_actors: [TA002]
+    threats:
+      T005: default
+      T008: accepted
+
+  - name: "Feature Workflow"
+    goal: "Generate AI prompts for threat modeling new features or producing secure implementation guidance"
+    input_data: [feature name, description, loaded threat model]
+    output_data: [prompt text files in .tmdd/out/]
+    data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem, df_filesystem_to_agent]
+    threat_actors: [TA002]
+    threats:
+      T009: default
+      T007: default
+
+  - name: "Compilation"
+    goal: "Generate consolidated YAML and AI implementation prompts from the full threat model"
+    input_data: [path to .tmdd directory, optional feature filter]
+    output_data: [consolidated .tm.yaml file, prompt text file in .tmdd/out/]
+    data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem]
+    threat_actors: [TA002]
+    threats:
+      T007: default
+      T009: default
+
+  - name: "Report Generation"
+    goal: "Generate a standalone interactive HTML threat model report with architecture diagram"
+    input_data: [path to .tmdd directory]
+    output_data: [HTML report file with embedded Cytoscape.js diagram]
+    data_flows: [df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
+    threat_actors: [TA001, TA002]
+    threats:
+      T002: default
+      T003: default
+      T004: default
+      T007: default
+      T010: default
+
+  - name: "Diagram Generation"
+    goal: "Generate a standalone interactive HTML architecture diagram with optional feature highlighting"
+    input_data: [path to .tmdd directory, optional feature name]
+    output_data: [HTML diagram file with embedded Cytoscape.js visualization]
+    data_flows: [df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
+    threat_actors: [TA001, TA002]
+    threats:
+      T002: default
+      T003: default
+      T004: default
+      T010: default

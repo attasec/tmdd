@@ -1,0 +1,8 @@
+# =============================================================================
+# Threat Actors - Who might attack the TMDD system
+# =============================================================================
+
+threat_actors:
+  TA001: "External attacker who compromises a CDN or npm package used by TMDD-generated HTML reports"
+  TA002: "Malicious insider with filesystem access who tampers with .tmdd/ YAML files to inject harmful content into reports or AI prompts"
+  TA003: "Automated CI/CD pipeline that invokes TMDD commands with untrusted or user-controlled input parameters"

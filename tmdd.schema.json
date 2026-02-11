@@ -1,0 +1,390 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tmdd.dev/schema/v0.5/tmdd.schema.json",
+  "title": "TMDD - Threat Modeling Driven Development Schema",
+  "description": "JSON Schema for validating TMDD threat model files (v0.5)",
+  "type": "object",
+  "definitions": {
+    "entity_id": {
+      "type": "string",
+      "description": "Canonical ID: lowercase ASCII, starts with letter, allowed: a-z 0-9 _",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "minLength": 1
+    },
+
+    "threat_id": {
+      "type": "string",
+      "description": "Threat catalog ID: T followed by digits (e.g., T001, T042)",
+      "pattern": "^T\\d+$"
+    },
+
+    "mitigation_id": {
+      "type": "string",
+      "description": "Mitigation catalog ID: M followed by digits (e.g., M001, M012)",
+      "pattern": "^M\\d+$"
+    },
+
+    "threat_actor_id": {
+      "type": "string",
+      "description": "Threat actor ID: TA followed by digits (e.g., TA001)",
+      "pattern": "^TA\\d+$"
+    },
+
+    "severity": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Threat severity level"
+    },
+
+    "stride": {
+      "type": "string",
+      "enum": ["S", "T", "R", "I", "D", "E"],
+      "description": "STRIDE category: Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege"
+    },
+
+    "mitigation_reference": {
+      "type": "object",
+      "description": "A code reference pointing to where a mitigation is implemented",
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Path to the source file",
+          "minLength": 1
+        },
+        "lines": {
+          "type": "string",
+          "description": "Line number or range (e.g., '42' or '42-58')",
+          "pattern": "^\\d+(-\\d+)?$"
+        }
+      },
+      "required": ["file"],
+      "additionalProperties": false
+    },
+
+    "mitigation_entry": {
+      "description": "A mitigation can be a simple description string or a rich object with optional code references",
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Simple mitigation description",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "description": "Rich mitigation with description and optional code references",
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "Description of the security control",
+              "minLength": 1
+            },
+            "references": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/mitigation_reference" },
+              "description": "Code locations where this mitigation is implemented"
+            }
+          },
+          "required": ["description"],
+          "additionalProperties": true
+        }
+      ]
+    },
+
+    "feature_threat_value": {
+      "description": "How a threat is mitigated in a feature: 'default' (inherit from catalog), 'accepted' (risk accepted), or an explicit list of mitigation IDs",
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": ["default", "accepted"],
+          "description": "'default' inherits suggested_mitigations from catalog; 'accepted' means risk is accepted"
+        },
+        {
+          "type": "array",
+          "items": { "$ref": "#/definitions/mitigation_id" },
+          "description": "Explicit list of mitigation IDs"
+        }
+      ]
+    },
+
+    "system": {
+      "type": "object",
+      "description": "System metadata (system.yaml)",
+      "properties": {
+        "system": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the system being modeled",
+              "minLength": 1
+            },
+            "description": {
+              "type": "string",
+              "description": "Brief description of the system's purpose"
+            },
+            "version": {
+              "type": "string",
+              "description": "Version of this threat model"
+            }
+          },
+          "required": ["name", "description", "version"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["system"]
+    },
+
+    "actors": {
+      "type": "object",
+      "description": "Actor definitions (actors.yaml)",
+      "properties": {
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/entity_id",
+                "description": "Unique ID for the actor"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of who/what this actor is"
+              }
+            },
+            "required": ["id", "description"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["actors"]
+    },
+
+    "components": {
+      "type": "object",
+      "description": "Component definitions (components.yaml)",
+      "properties": {
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/entity_id",
+                "description": "Unique ID for the component"
+              },
+              "name": {
+                "type": "string",
+                "description": "Human-readable name for the component"
+              },
+              "description": {
+                "type": "string",
+                "description": "What this component does"
+              },
+              "type": {
+                "type": "string",
+                "description": "Component type",
+                "enum": ["frontend", "api", "service", "database", "queue", "external", "external_service", "cache", "other"]
+              },
+              "technology": {
+                "type": "string",
+                "description": "Technology stack used"
+              },
+              "trust_boundary": {
+                "type": "string",
+                "description": "Trust boundary this component belongs to (e.g., public, internal, external, dmz)"
+              }
+            },
+            "required": ["id", "description"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["components"]
+    },
+
+    "features": {
+      "type": "object",
+      "description": "Feature definitions (features.yaml)",
+      "properties": {
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Unique name for the feature",
+                "minLength": 1
+              },
+              "goal": {
+                "type": "string",
+                "description": "What this feature aims to achieve"
+              },
+              "input_data": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Data inputs required by this feature"
+              },
+              "output_data": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Data outputs produced by this feature"
+              },
+              "data_flows": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/entity_id" },
+                "description": "Data flow IDs involved in this feature"
+              },
+              "threat_actors": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/threat_actor_id" },
+                "description": "Threat actor IDs relevant to this feature"
+              },
+              "threats": {
+                "type": "object",
+                "description": "Threat-to-mitigation mapping. Keys are threat IDs (T001, T002...), values are 'default', 'accepted', or a list of mitigation IDs [M001, M002]",
+                "additionalProperties": {
+                  "$ref": "#/definitions/feature_threat_value"
+                }
+              },
+              "last_updated": {
+                "type": "string",
+                "description": "Date when this feature was last updated (YYYY-MM-DD)",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              }
+            },
+            "required": ["name", "goal"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["features"]
+    },
+
+    "data_flows": {
+      "type": "object",
+      "description": "Data flow definitions (data_flows.yaml)",
+      "properties": {
+        "data_flows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/entity_id",
+                "description": "Unique ID for the data flow (convention: df_{source}_to_{destination})"
+              },
+              "source": {
+                "$ref": "#/definitions/entity_id",
+                "description": "ID of origin actor or component"
+              },
+              "destination": {
+                "$ref": "#/definitions/entity_id",
+                "description": "ID of target actor or component"
+              },
+              "data_description": {
+                "type": "string",
+                "description": "What data flows through this connection"
+              },
+              "protocol": {
+                "type": "string",
+                "description": "Communication protocol used (e.g., HTTPS, TCP)"
+              },
+              "authentication": {
+                "type": "string",
+                "description": "Authentication mechanism (e.g., JWT, API key)"
+              },
+              "encryption": {
+                "type": "string",
+                "description": "Encryption used in transit"
+              },
+              "sensitivity": {
+                "type": "string",
+                "description": "Data sensitivity level (e.g., normal, critical)"
+              }
+            },
+            "required": ["id", "source", "destination", "data_description"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["data_flows"]
+    },
+
+    "threat_catalog": {
+      "type": "object",
+      "description": "Threat catalog (threats/catalog.yaml)",
+      "properties": {
+        "threats": {
+          "type": "object",
+          "description": "Map of threat_id -> threat definition",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Human-readable name for the threat",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "description": "Detailed description of the threat"
+              },
+              "severity": {
+                "$ref": "#/definitions/severity"
+              },
+              "stride": {
+                "$ref": "#/definitions/stride"
+              },
+              "cwe": {
+                "type": "string",
+                "description": "CWE identifier (e.g., CWE-89)"
+              },
+              "suggested_mitigations": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/mitigation_id" },
+                "description": "Default mitigations applied when a feature uses 'default'"
+              }
+            },
+            "required": ["name", "description"],
+            "additionalProperties": true
+          }
+        }
+      },
+      "required": ["threats"]
+    },
+
+    "threat_mitigations": {
+      "type": "object",
+      "description": "Mitigation catalog (threats/mitigations.yaml)",
+      "properties": {
+        "mitigations": {
+          "type": "object",
+          "description": "Map of mitigation_id -> description string or rich object",
+          "additionalProperties": {
+            "$ref": "#/definitions/mitigation_entry"
+          }
+        }
+      },
+      "required": ["mitigations"]
+    },
+
+    "threat_actors": {
+      "type": "object",
+      "description": "Threat actor profiles (threats/threat_actors.yaml)",
+      "properties": {
+        "threat_actors": {
+          "type": "object",
+          "description": "Map of threat_actor_id -> description string",
+          "additionalProperties": {
+            "type": "string",
+            "description": "Description of the threat actor",
+            "minLength": 1
+          }
+        }
+      },
+      "required": ["threat_actors"]
+    }
+  }
+}

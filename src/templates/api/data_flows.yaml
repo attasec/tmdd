@@ -1,0 +1,27 @@
+# Data Flows
+data_flows:
+  - id: df_client_to_gateway
+    source: api_client
+    destination: api_gateway
+    data_description: API requests
+    protocol: HTTPS
+    authentication: API key / OAuth2
+    
+  - id: df_gateway_to_service
+    source: api_gateway
+    destination: api_service
+    data_description: Proxied API requests
+    protocol: HTTP (internal)
+    
+  - id: df_service_to_database
+    source: api_service
+    destination: database
+    data_description: Data queries
+    protocol: TCP
+    
+  - id: df_service_to_cache
+    source: api_service
+    destination: cache
+    data_description: Cache reads/writes
+    protocol: TCP
+

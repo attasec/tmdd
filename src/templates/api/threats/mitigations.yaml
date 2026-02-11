@@ -1,0 +1,21 @@
+# Mitigations Catalog - API security controls
+#
+# Each mitigation can be a simple string or a rich object:
+#   M001: "Description"
+#   M002:
+#     description: "Description"
+#     references:                        # optional code references
+#       - file: "src/auth/middleware.ts"
+#         lines: "42-58"                 # optional line or range
+#
+mitigations:
+  M001: Object-level authorization checks on every request
+  M002: UUID/GUID for resource identifiers (not sequential)
+  M003: Short-lived tokens with refresh mechanism
+  M004: API key rotation and revocation
+  M005: Response filtering to minimum required fields
+  M006: Rate limiting per client/IP with backoff
+  M007: Parameterized queries for database access
+  M008: Input validation with strict schemas
+  M009: Explicit allowlist for bindable properties
+

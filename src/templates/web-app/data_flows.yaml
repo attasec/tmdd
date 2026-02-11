@@ -1,0 +1,22 @@
+# Data Flows - How data moves through the system
+data_flows:
+  - id: df_user_to_frontend
+    source: user
+    destination: web_frontend
+    data_description: User interactions (forms, clicks, navigation)
+    protocol: HTTPS
+    
+  - id: df_frontend_to_api
+    source: web_frontend
+    destination: api_backend
+    data_description: API requests and responses
+    protocol: HTTPS
+    authentication: JWT/Session
+    
+  - id: df_api_to_database
+    source: api_backend
+    destination: database
+    data_description: Data queries and mutations
+    protocol: TCP (encrypted)
+    authentication: Connection credentials
+

@@ -1,0 +1,14 @@
+# =============================================================================
+# Components - Building blocks of your architecture
+# =============================================================================
+# Components are services, databases, frontends, external APIs, etc.
+# ID format: lowercase, a-z, 0-9, underscore only. Start with letter.
+#
+# Types: frontend, api, service, database, queue, external, cache, other
+# =============================================================================
+
+components:
+  - id: main_service
+    description: Primary application service
+    type: service
+

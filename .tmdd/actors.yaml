@@ -1,0 +1,13 @@
+# =============================================================================
+# Actors - Who interacts with the TMDD CLI
+# =============================================================================
+
+actors:
+  - id: developer
+    description: "Developer or security engineer who runs TMDD CLI commands (init, lint, feature, compile) and edits .tmdd/ YAML files"
+
+  - id: ai_agent
+    description: "AI coding agent that consumes generated prompt files (.tmdd/out/*.prompt.txt, *.threatmodel.txt) to produce threat models or secure code"
+
+  - id: report_viewer
+    description: "Person viewing generated HTML reports and diagrams in a web browser, potentially including non-developers or stakeholders"

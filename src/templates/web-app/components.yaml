@@ -1,0 +1,20 @@
+# Components - System architecture
+components:
+  - id: web_frontend
+    description: Browser-based user interface
+    type: frontend
+    technology: React/Vue/Angular
+    trust_boundary: public
+    
+  - id: api_backend
+    description: Backend API service
+    type: api
+    technology: Node.js/Python/Go
+    trust_boundary: internal
+    
+  - id: database
+    description: Primary data store
+    type: database
+    technology: PostgreSQL/MySQL
+    trust_boundary: internal
+

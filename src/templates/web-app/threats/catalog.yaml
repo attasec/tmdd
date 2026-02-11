@@ -1,0 +1,58 @@
+# Threat Catalog - Common web application threats
+threats:
+  T001:
+    name: SQL Injection
+    description: Unsanitized input reaches database queries
+    severity: high
+    stride: T
+    cwe: CWE-89
+    suggested_mitigations: [M001, M002]
+
+  T002:
+    name: Cross-Site Scripting (XSS)
+    description: Malicious scripts execute in victim's browser
+    severity: high
+    stride: T
+    cwe: CWE-79
+    suggested_mitigations: [M003, M004]
+
+  T003:
+    name: Broken Authentication
+    description: Weak session management or credential handling
+    severity: critical
+    stride: S
+    cwe: CWE-287
+    suggested_mitigations: [M005, M006]
+
+  T004:
+    name: Sensitive Data Exposure
+    description: Sensitive data exposed in transit or at rest
+    severity: high
+    stride: I
+    cwe: CWE-200
+    suggested_mitigations: [M007, M008]
+
+  T005:
+    name: Broken Access Control
+    description: Users can access resources beyond their permissions
+    severity: high
+    stride: E
+    cwe: CWE-284
+    suggested_mitigations: [M009, M010]
+
+  T006:
+    name: CSRF (Cross-Site Request Forgery)
+    description: Attacker tricks user into performing unwanted actions
+    severity: medium
+    stride: S
+    cwe: CWE-352
+    suggested_mitigations: [M011]
+
+  T007:
+    name: Rate Limiting Bypass
+    description: Insufficient rate limiting enables brute-force attacks
+    severity: medium
+    stride: D
+    cwe: CWE-770
+    suggested_mitigations: [M012]
+

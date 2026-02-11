@@ -1,0 +1,12 @@
+# =============================================================================
+# TMDD System Definition
+# =============================================================================
+# This file defines the system being modeled.
+# Edit the name and description to match your system.
+# =============================================================================
+
+system:
+  name: "{{name}}"
+  description: "{{description}}"
+  version: "1.0"
+
