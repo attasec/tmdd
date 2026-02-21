@@ -234,6 +234,7 @@ def _build_cytoscape_elements(threat_model):
                 "shape": _CYTOSCAPE_SHAPES.get(ctype, "rectangle"),
                 "description": comp.get("description", ""),
                 "technology": comp.get("technology", ""),
+                "sourcePaths": comp.get("source_paths", []),
             }})
 
     # --- edges (data flows) ---
@@ -412,6 +413,14 @@ def _build_components_rows(components):
     for comp in components:
         boundary = comp.get("trust_boundary", "internal")
         boundary_class = _esc(boundary).lower().replace(" ", "-")
+        source_paths = comp.get("source_paths", [])
+        if source_paths:
+            paths_html = " ".join(
+                f'<code style="font-size:0.85em;background:#eef;padding:0.1rem 0.3rem;border-radius:2px;">{_esc(p)}</code>'
+                for p in source_paths
+            )
+        else:
+            paths_html = '<span style="color:#999;">—</span>'
         rows.append(
             f"<tr>"
             f"<td><code>{_esc(comp.get('id', ''))}</code></td>"
@@ -419,6 +428,7 @@ def _build_components_rows(components):
             f'<td><span class="badge type">{_esc(comp.get("type", "unknown"))}</span></td>'
             f"<td><code>{_esc(comp.get('technology', 'N/A'))}</code></td>"
             f'<td><span class="badge boundary {boundary_class}">{_esc(boundary)}</span></td>'
+            f"<td>{paths_html}</td>"
             f"</tr>"
         )
     return "\n".join(rows)
@@ -721,6 +731,8 @@ _DIAGRAM_JS = r"""
     if (d.technology) h += '<div><span class="info-label">Tech:</span> ' + esc(d.technology) + '</div>';
     if (d.nodeType && d.nodeType !== 'actor')
       h += '<div><span class="info-label">Type:</span> ' + esc(d.nodeType) + '</div>';
+    if (d.sourcePaths && d.sourcePaths.length)
+      h += '<div><span class="info-label">Sources:</span> ' + d.sourcePaths.map(function(p){ return '<code>' + esc(p) + '</code>'; }).join(' ') + '</div>';
     info.innerHTML = h;
     info.style.display = 'block';
   });
@@ -988,7 +1000,7 @@ def generate_html_report(threat_model, system_name):
         </section>
 
         <section><h2>Components</h2><div style="overflow-x:auto;">
-            <table><thead><tr><th>ID</th><th>Description</th><th>Type</th><th>Technology</th><th>Trust Boundary</th></tr></thead>
+            <table><thead><tr><th>ID</th><th>Description</th><th>Type</th><th>Technology</th><th>Trust Boundary</th><th>Source Paths</th></tr></thead>
             <tbody>{components_rows}</tbody></table></div>
         </section>
 

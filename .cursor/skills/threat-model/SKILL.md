@@ -116,12 +116,19 @@ components:
     type: api                  # frontend|api|service|database|queue|external|cache|other
     technology: "Node.js / Express"
     trust_boundary: public     # public|internal|external
+    source_paths:              # OPTIONAL - glob patterns mapping to source files
+      - "src/routes/**"
+      - "src/middleware/**"
+      - "src/server.ts"
 ```
 
 **Rules:**
 - One component per distinct architectural unit discovered in Phase 1
 - `description` must mention the actual technology and what it does in this project
 - `trust_boundary` must reflect the real deployment (not assumed)
+- `source_paths` (optional) should list glob patterns for source files that belong to this
+  component. This enables deterministic PR-to-component mapping for threat review workflows.
+  Prefer specific globs over overly broad ones (e.g., `src/routes/**` over `src/**`).
 
 #### 2. `actors.yaml` — Real users and external systems
 

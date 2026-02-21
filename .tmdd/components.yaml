@@ -10,36 +10,50 @@ components:
     type: service
     technology: "Python / argparse"
     trust_boundary: internal
+    source_paths:
+      - "src/cli.py"
+      - "src/__main__.py"
 
   - id: command_engine
     description: "Command handlers for init, lint, feature, and compile operations (src/commands/)"
     type: service
     technology: "Python"
     trust_boundary: internal
+    source_paths:
+      - "src/commands/**"
 
   - id: yaml_processor
     description: "YAML loading via yaml.safe_load(), threat model assembly, and cross-reference validation (src/utils.py, src/commands/lint.py)"
     type: service
     technology: "Python / PyYAML (safe_load)"
     trust_boundary: internal
+    source_paths:
+      - "src/utils.py"
 
   - id: prompt_generator
     description: "Generates AI prompt text files for threat modeling and secure coding workflows (src/generators/threat_prompt.py, agent_prompt.py)"
     type: service
     technology: "Python"
     trust_boundary: internal
+    source_paths:
+      - "src/generators/**"
 
   - id: template_store
     description: "Bundled YAML template files (minimal, web-app, api) used by init command for project scaffolding (src/templates/)"
     type: other
     technology: "YAML files"
     trust_boundary: internal
+    source_paths:
+      - "src/templates/**"
 
   - id: html_renderer
     description: "Generates interactive HTML reports and architecture diagrams with embedded Cytoscape.js (report.py, diagram.py)"
     type: service
     technology: "Python / HTML / JavaScript"
     trust_boundary: internal
+    source_paths:
+      - "report.py"
+      - "diagram.py"
 
   - id: filesystem_store
     description: "Local filesystem storage for .tmdd/ YAML files, generated prompts, reports, and diagrams (.tmdd/, .tmdd/out/)"
