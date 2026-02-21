@@ -30,7 +30,6 @@ pip install .
 
 ```bash
 tmdd --help
-tmdd-diagram --help
 tmdd-report --help
 ```
 
@@ -39,9 +38,6 @@ tmdd-report --help
 
 ```bash
 tmdd init --template web-app -n "My App" -d "App description"
-tmdd lint
-tmdd-diagram
-tmdd-report
 ```
 
 ### > Threat-model a new feature (AI workflow)
@@ -55,23 +51,202 @@ tmdd feature "User Login"
 ```
 ---
 
-## How It Works
+## AI Agent Setup
 
-TMDD follows a **threat-model-first** development cycle. You define your system architecture and threats in YAML, then use those definitions to generate security-aware prompts for AI coding assistants — or as a structured reference for manual implementation.
+TMDD ships with agent instructions that teach AI coding assistants how to build
+architecture-grounded threat models. Once installed, the AI analyzes your actual
+codebase before writing any YAML; producing specific, actionable threats.
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  tmdd feature   │────>│  AI edits YAML  │────>│   tmdd lint     │
-│  (new feature)  │     │  (threat model) │     │   (validate)    │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                        │
-┌─────────────────┐     ┌─────────────────┐             │
-│  AI implements  │<────│  tmdd feature   │<────────────┘
-│  (secure code)  │     │  (get prompt)   │
-└─────────────────┘     └─────────────────┘
+  ┌──────────────────────────────────────────────────────────────────┐
+  │                    What the agent does for you                   │
+  │                                                                  │
+  │   1. Scans your codebase (frameworks, routes, DB, auth, etc.)   │
+  │   2. Maps real code to TMDD components and data flows           │
+  │   3. Runs STRIDE analysis against actual architecture           │
+  │   4. Writes cross-referenced .tmdd/ YAML files                  │
+  │   5. Validates with tmdd lint                                    │
+  │                                                                  │
+  │   You get: a threat model tied to your code, not a template.    │
+  └──────────────────────────────────────────────────────────────────┘
 ```
 
-The AI steps are optional — you can edit the YAML files manually and use `tmdd` purely as a structured threat modeling tool.
+### Option A: Cursor
+
+**Step 1** — Copy the skill to your Cursor skills folder:
+
+```bash
+# macOS / Linux
+cp -r agents/cursor-skill ~/.cursor/skills/tmdd-threat-modeling
+
+# Windows (PowerShell)
+Copy-Item -Recurse agents\cursor-skill "$env:USERPROFILE\.cursor\skills\tmdd-threat-modeling"
+```
+
+**Step 2** — Install the tmdd CLI (if you haven't already):
+
+```bash
+pip install .
+```
+
+**Step 3** — Open any project in Cursor and ask the agent:
+
+```
+/threat-model 
+```
+(or whatever you named your skill)
+You can also provide additional context for the threat modeling after this command.
+
+The skill activates automatically. It also auto-triggers when you edit any
+`.tmdd/**/*.yaml` file. No further configuration needed.
+
+```
+  YOUR PROJECT                       CURSOR
+  ┌──────────────┐    "/threat-model  ┌──────────────────────┐
+  │  src/        │     this codebase" │      Skill activates │
+  │  routes/     │  ────────────────> │  ┌────────────────┐  │
+  │  models/     │                    │  │ 1. Scan code   │  │
+  │  ...         │                    │  │ 2. Map arch    │  │
+  │              │  <──────────────── │  │ 3. STRIDE      │  │
+  │  .tmdd/      │    writes YAML     │  │ 4. Write YAML  │  │
+  │    components│    runs tmdd lint  │  | 5. Lint        │  │
+  │    threats/  │                    │  └────────────────┘  │
+  └──────────────┘                    └──────────────────────┘
+```
+
+**Step 4** — Generate outputs:
+
+```bash
+tmdd lint                  # validate the model
+tmdd-report                # HTML threat model report
+```
+
+### Option B: Claude Code
+
+**Step 1** — Initialize a threat model in your project:
+
+```bash
+cd your-project
+tmdd init --template web-app -n "My App" -d "Description"
+```
+
+**Step 2** — Copy the agent instructions into your `.tmdd/` directory:
+
+```bash
+cp path/to/tmdd/agents/AGENTS.md .tmdd/AGENTS.md
+```
+
+Claude Code auto-discovers `AGENTS.md` files and uses them as context when
+working in that directory.
+
+**Step 3** — Ask Claude Code to threat-model:
+
+```
+"Analyze this codebase and update the threat model in .tmdd/"
+```
+
+**Step 4** — Validate and generate outputs:
+
+```bash
+tmdd lint
+tmdd-diagram
+tmdd-report
+```
+
+### What the agent instructions solve
+
+Without these instructions, AI models commonly produce unusable threat models:
+
+| Problem | With TMDD agent instructions |
+|---------|------------------------------|
+| Generic threats ("SQL injection is possible") | Specific threats ("SQL injection via raw query in `src/routes/search.ts`") |
+| No architecture analysis | Scans codebase first, maps real components |
+| Flat threat lists | Dict mapping with threat-to-mitigation links |
+| Invented IDs like `Payment-API` | Valid IDs: `payment_api`, `T001`, `M001` |
+| Dangling references | All cross-references validated by `tmdd lint` |
+| YAML dumped in chat | Files edited directly in the project |
+| Mitigations without code refs | Rich format with file paths and line numbers |
+
+---
+
+## How It Works — Secure Vibe Coding with TMDD
+
+TMDD puts threat modeling **alongside** implementation, so your AI writes secure
+code from the start — not as an afterthought. Here's the full loop:
+
+```
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                                                                     │
+  │   1. tmdd init          Scaffold your threat model                  │
+  │          │                                                          │
+  │          v                                                          │
+  │   2. tmdd feature       "Password Reset" -d "Reset via email"      │
+  │          │               generates threat modeling prompt            │
+  │          v                                                          │
+  │   3. AI threat-models   Give prompt to Cursor / Claude Code         │
+  │          │               AI analyzes code, writes .tmdd/ YAML       │
+  │          v                                                          │
+  │   4. tmdd lint           Validate cross-references                  │
+  │          │                                                          │
+  │          v                                                          │
+  │   5. tmdd feature       "Password Reset"  (no -d flag)             │
+  │          │               feature exists -> implementation prompt     │
+  │          v                                                          │
+  │   6. AI implements      Vibe code — but securely.                   │
+  │                          AI follows threat model as guardrails.     │
+  │                                                                     │
+  │          . . . repeat for each feature . . .                        │
+  │                                                                     │
+  └─────────────────────────────────────────────────────────────────────┘
+```
+
+### Step by step
+
+**1. Initialize** — Create the threat model structure in your project:
+
+```bash
+tmdd init --template web-app -n "My App" -d "App description"
+```
+
+**2. Declare a feature** — Tell TMDD what you want to build. Since the feature
+doesn't exist in `features.yaml` yet, this generates a **threat modeling prompt**:
+
+```bash
+tmdd feature "Password Reset" -d "Reset password via email link"
+# -> .tmdd/out/password_reset.threatmodel.txt
+```
+
+**3. Threat-model it** — Give the prompt to your AI agent (Cursor skill does
+this automatically) or edit the YAML files manually. The AI will:
+- Analyze your codebase architecture
+- Add components, data flows, threats, and mitigations to `.tmdd/`
+- Map threats to the feature with STRIDE analysis
+
+**4. Validate** — Check that all cross-references are intact:
+
+```bash
+tmdd lint
+```
+
+**5. Get the implementation prompt** — Now the feature exists in `features.yaml`,
+so running the same command again generates a **secure coding prompt** with the
+feature's threat-to-mitigation mappings as a requirements checklist:
+
+```bash
+tmdd feature "Password Reset"
+# -> .tmdd/out/password_reset.prompt.txt
+```
+
+**6. Vibe code securely** — Give the implementation prompt to your coding AI.
+It now knows every threat that applies to this feature and exactly which
+mitigations to implement. Your code gets written with security built in, not
+bolted on.
+
+Repeat steps 2-6 for every feature. The threat model grows alongside your
+codebase.
+
+The AI steps are optional — you can edit YAML manually and use `tmdd` purely as
+a structured threat modeling tool.
 
 ---
 
@@ -293,17 +468,6 @@ This gives you:
 - Hover documentation for fields
 
 **Note**: Always run `tmdd lint` for full validation.
-
----
-
-## AI Agent Support
-
-TMDD ships with pre-built instructions for AI coding agents:
-
-- **[Cursor Skill](agents/cursor-skill/SKILL.md)** — Drop-in skill for Cursor's agent mode. Your Cursor can build a threat model in TMDD-compliant format by itself, and then you can generate your shiny threat modeling report using `tmdd-report`.
-- **[Claude Code](agents/AGENTS.md)** — Copy to your `.tmdd/` directory for Claude Code integration.
-
-These agents understand the TMDD YAML schema and can create, update, and validate threat models as part of your development workflow.
 
 ---
 
