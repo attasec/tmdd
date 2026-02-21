@@ -4,19 +4,29 @@ components:
     description: API gateway / load balancer
     type: api
     trust_boundary: dmz
+    # source_paths:
+    #   - "src/gateway/**"
     
   - id: api_service
     description: Core API service
     type: api
     trust_boundary: internal
+    # source_paths:
+    #   - "src/api/**"
+    #   - "src/services/**"
     
   - id: database
     description: Primary data store
     type: database
     trust_boundary: internal
+    # source_paths:
+    #   - "src/models/**"
+    #   - "migrations/**"
     
   - id: cache
     description: Redis cache for rate limiting and sessions
     type: cache
     trust_boundary: internal
+    # source_paths:
+    #   - "src/cache/**"
 

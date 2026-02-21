@@ -5,16 +5,25 @@ components:
     type: frontend
     technology: React/Vue/Angular
     trust_boundary: public
+    # source_paths:
+    #   - "src/pages/**"
+    #   - "src/components/**"
     
   - id: api_backend
     description: Backend API service
     type: api
     technology: Node.js/Python/Go
     trust_boundary: internal
+    # source_paths:
+    #   - "src/routes/**"
+    #   - "src/middleware/**"
     
   - id: database
     description: Primary data store
     type: database
     technology: PostgreSQL/MySQL
     trust_boundary: internal
+    # source_paths:
+    #   - "prisma/**"
+    #   - "src/models/**"
 

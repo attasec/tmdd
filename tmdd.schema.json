@@ -193,6 +193,14 @@
               "trust_boundary": {
                 "type": "string",
                 "description": "Trust boundary this component belongs to (e.g., public, internal, external, dmz)"
+              },
+              "source_paths": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": "Glob patterns mapping this component to source files in the repository (e.g., 'src/api/**', 'src/routes/*.ts'). Used for PR-to-component mapping in threat review workflows."
               }
             },
             "required": ["id", "description"],

@@ -5,10 +5,15 @@
 # ID format: lowercase, a-z, 0-9, underscore only. Start with letter.
 #
 # Types: frontend, api, service, database, queue, external, cache, other
+#
+# Optional: source_paths - glob patterns mapping component to source files.
+# Enables PR-to-component mapping for threat review workflows.
 # =============================================================================
 
 components:
   - id: main_service
     description: Primary application service
     type: service
+    # source_paths:
+    #   - "src/**"
 
