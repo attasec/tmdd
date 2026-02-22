@@ -11,16 +11,23 @@ SEVERITY_VALUES = {"low", "medium", "high", "critical"}
 STRIDE_VALUES = {"S", "T", "R", "I", "D", "E"}
 
 
+DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
 def cmd_lint(args):
     """Validate threat model files."""
     model_dir = resolve_model_dir(args.path)
     threats_dir = model_dir / "threats"
 
     errors = []
+    warnings = []
     data = {}
 
     def add_error(loc, msg):
         errors.append(f"{loc}: {msg}")
+
+    def add_warning(loc, msg):
+        warnings.append(f"{loc}: {msg}")
 
     # --- check required files exist ---
     main_files = ["system.yaml", "actors.yaml", "components.yaml", "features.yaml", "data_flows.yaml"]
@@ -231,6 +238,42 @@ def cmd_lint(args):
                     if mit_id not in mitigations:
                         add_error(loc, f"unknown mitigation '{mit_id}'")
 
+    # --- review status checks (warnings, not errors) ---
+    features_list = data["features.yaml"].get("features", [])
+    reviewed_count = 0
+    for index, feature in enumerate(features_list):
+        if not isinstance(feature, dict):
+            continue
+        loc = f"features.yaml:[{index}]"
+        fname = feature.get("name", f"[{index}]")
+        reviewed_by = feature.get("reviewed_by")
+        reviewed_at = feature.get("reviewed_at")
+        last_updated = feature.get("last_updated")
+
+        if reviewed_by:
+            reviewed_count += 1
+
+        # Validate reviewed_at format
+        if reviewed_at and not DATE_PATTERN.match(str(reviewed_at)):
+            add_error(loc, f"'{fname}' reviewed_at must be YYYY-MM-DD")
+
+        # Warn: accepted threats without human review
+        feature_threats = feature.get("threats", {})
+        has_accepted = False
+        if isinstance(feature_threats, dict):
+            has_accepted = any(
+                v == "accepted" or (isinstance(v, dict) and v.get("status") == "accepted")
+                for v in feature_threats.values()
+            )
+        if has_accepted and not reviewed_by:
+            add_warning(loc, f"'{fname}' has accepted threats but no reviewed_by")
+
+        # Warn: stale review (last_updated > reviewed_at)
+        if last_updated and reviewed_at:
+            if DATE_PATTERN.match(str(last_updated)) and DATE_PATTERN.match(str(reviewed_at)):
+                if str(last_updated) > str(reviewed_at):
+                    add_warning(loc, f"'{fname}' updated ({last_updated}) after last review ({reviewed_at})")
+
     # --- report results ---
     if errors:
         print(f"{len(errors)} error(s):\n")
@@ -239,5 +282,14 @@ def cmd_lint(args):
         return 1
 
     print(f"  {len(actors)} actors, {len(components)} components, {len(flows)} flows")
-    print(f"  {len(threats)} threats, {len(mitigations)} mitigations\nOK")
+    print(f"  {len(threats)} threats, {len(mitigations)} mitigations")
+    total_features = len([f for f in features_list if isinstance(f, dict)])
+    print(f"  {reviewed_count}/{total_features} features reviewed")
+
+    if warnings:
+        print(f"\n{len(warnings)} warning(s):\n")
+        for warning in warnings:
+            print(f"  [!] {warning}")
+
+    print("\nOK")
     return 0

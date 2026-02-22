@@ -328,6 +328,11 @@ code { font-family: Consolas, monospace; background: #f5f5f5; padding: 0.1rem 0.
 .feature-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
 .feature-header h3 { font-size: 1.1rem; }
 .last-updated { font-size: 0.8rem; color: #666; }
+.review-badge { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 3px; font-weight: bold; white-space: nowrap; }
+.review-ok { background: #d1fae5; color: #065f46; }
+.review-stale { background: #fef3c7; color: #92400e; }
+.review-warn { background: #fee2e2; color: #991b1b; }
+.review-none { background: #f3f4f6; color: #6b7280; }
 .feature-goal { color: #444; margin-bottom: 0.75rem; }
 .feature-meta { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; font-size: 0.9rem; }
 .meta-item { background: #f5f5f5; padding: 0.4rem 0.6rem; }
@@ -548,13 +553,40 @@ def _build_features_html(features, threats, mitigations):
         if not threat_mappings:
             threat_mappings = '<p style="color:#999;font-size:0.9rem;">No threat mappings defined for this feature.</p>'
 
-        # --- updated badge ---
+        # --- updated / review badges ---
         updated_html = f'<span class="last-updated">Updated: {fupdated}</span>' if fupdated else ""
+
+        reviewed_by = _esc(feature.get("reviewed_by", ""))
+        reviewed_at = _esc(feature.get("reviewed_at", ""))
+        has_accepted = isinstance(feature_threats, dict) and any(
+            v == "accepted" or (isinstance(v, dict) and v.get("status") == "accepted")
+            for v in feature_threats.values()
+        )
+        stale = (fupdated and reviewed_at and fupdated > reviewed_at)
+
+        if reviewed_by:
+            if stale:
+                review_badge = (
+                    f'<span class="review-badge review-stale" title="Updated after last review">'
+                    f'Reviewed: {reviewed_by} ({reviewed_at}) &mdash; needs re-review</span>'
+                )
+            else:
+                review_badge = (
+                    f'<span class="review-badge review-ok">'
+                    f'Reviewed: {reviewed_by} ({reviewed_at})</span>'
+                )
+        elif has_accepted:
+            review_badge = (
+                '<span class="review-badge review-warn">'
+                'Has accepted risks &mdash; not reviewed</span>'
+            )
+        else:
+            review_badge = '<span class="review-badge review-none">Not reviewed</span>'
 
         sections.append(
             f'<div class="feature-card">'
             f'<div class="feature-header"><h3>{fname}</h3>'
-            f'{updated_html}</div>'
+            f'<div>{review_badge} {updated_html}</div></div>'
             f'<p class="feature-goal">{fgoal}</p>'
             f'<div class="feature-meta">{meta_html}</div>'
             f'<div class="threat-mappings"><h4>Threat &rarr; Mitigation Mappings</h4>'
@@ -950,6 +982,9 @@ def generate_html_report(threat_model, system_name):
                 elif isinstance(mitigation_ids, list):
                     total_mitigations_used.update(mitigation_ids)
 
+    # Review coverage stats
+    reviewed_features = sum(1 for f in features if isinstance(f, dict) and f.get("reviewed_by"))
+
     # Build sections
     threats_rows = _build_threats_rows(threats, total_threats_used)
     mitigations_rows = _build_mitigations_rows(mitigations, total_mitigations_used)
@@ -989,6 +1024,7 @@ def generate_html_report(threat_model, system_name):
             <div class="stat-card"><div class="number">{len(threats)}</div><div class="label">Threats</div></div>
             <div class="stat-card"><div class="number">{len(mitigations)}</div><div class="label">Mitigations</div></div>
             <div class="stat-card"><div class="number">{len(total_threats_used)}</div><div class="label">Active Threats</div></div>
+            <div class="stat-card"><div class="number">{reviewed_features}/{len(features)}</div><div class="label">Features Reviewed</div></div>
         </div>
 
         <section><h2>System Diagram</h2>

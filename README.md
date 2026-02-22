@@ -10,7 +10,7 @@ There's also Cursor skill provided, so your Cursor can build threat model in tmd
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python Version](https://img.shields.io/badge/python-%3E%3D3.8-blue)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-0.5.0-green.svg)](https://github.com/attasec/tmdd)
+[![Version](https://img.shields.io/badge/version-0.5.1-green.svg)](https://github.com/attasec/tmdd)
 [![GitHub issues](https://img.shields.io/github/issues/attasec/tmdd)](https://github.com/attasec/tmdd/issues)
 [![GitHub stars](https://img.shields.io/github/stars/attasec/tmdd)](https://github.com/attasec/tmdd/stargazers)
 
@@ -177,11 +177,11 @@ code from the start — not as an afterthought. Here's the full loop:
 ```
   ┌─────────────────────────────────────────────────────────────────────┐
   │                                                                     │
-  │   1. tmdd init          Scaffold your threat model                  │
+  │   1. tmdd init          Initialize your threat model                │
   │          │                                                          │
   │          v                                                          │
-  │   2. tmdd feature       "Password Reset" -d "Reset via email"      │
-  │          │               generates threat modeling prompt            │
+  │   2. tmdd feature       "Password Reset" -d "Reset via email"       │
+  │          │               generates threat modeling prompt           │
   │          v                                                          │
   │   3. AI threat-models   Give prompt to Cursor / Claude Code         │
   │          │               AI analyzes code, writes .tmdd/ YAML       │
@@ -189,11 +189,11 @@ code from the start — not as an afterthought. Here's the full loop:
   │   4. tmdd lint           Validate cross-references                  │
   │          │                                                          │
   │          v                                                          │
-  │   5. tmdd feature       "Password Reset"  (no -d flag)             │
-  │          │               feature exists -> implementation prompt     │
+  │   5. tmdd feature       "Password Reset"  (no -d flag)              │
+  │          │               feature exists -> implementation prompt    │
   │          v                                                          │
   │   6. AI implements      Vibe code — but securely.                   │
-  │                          AI follows threat model as guardrails.     │
+  │                         AI follows threat model as guardrails.      │
   │                                                                     │
   │          . . . repeat for each feature . . .                        │
   │                                                                     │
@@ -202,7 +202,7 @@ code from the start — not as an afterthought. Here's the full loop:
 
 ### Step by step
 
-**1. Initialize** — Create the threat model structure in your project:
+**1. Initialize** — Create the threat model structure in your project (if it's not existing already):
 
 ```bash
 tmdd init --template web-app -n "My App" -d "App description"
@@ -238,7 +238,7 @@ tmdd feature "Password Reset"
 ```
 
 **6. Vibe code securely** — Give the implementation prompt to your coding AI.
-It now knows every threat that applies to this feature and exactly which
+It now knows potential threats that apply to this feature and which
 mitigations to implement. Your code gets written with security built in, not
 bolted on.
 
@@ -494,4 +494,4 @@ Apache License 2.0 — see [LICENSE](LICENSE) for details.
 
 ---
 
-**TMDD v0.5.0** — threat model as code.
+**TMDD v0.5.1** — threat model as code.

@@ -260,6 +260,16 @@
                 "type": "string",
                 "description": "Date when this feature was last updated (YYYY-MM-DD)",
                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "reviewed_by": {
+                "type": "string",
+                "description": "Name or username of the human analyst who reviewed this feature's threat model",
+                "minLength": 1
+              },
+              "reviewed_at": {
+                "type": "string",
+                "description": "Date when this feature was last reviewed (YYYY-MM-DD). If last_updated > reviewed_at, the feature needs re-review.",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
               }
             },
             "required": ["name", "goal"],

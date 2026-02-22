@@ -84,3 +84,11 @@ threats:
     stride: T
     cwe: CWE-79
     suggested_mitigations: [M005, M011]
+
+  T011:
+    name: "Report output path traversal via --name parameter"
+    description: "In report.py:1085, the --name argument is joined with the output directory via Path(out) / output_name without validation. Unlike diagram.py which uses safe_name() for filename generation (line 156), report.py passes the raw user input directly, allowing path traversal characters (e.g., ../../malicious.html) to write the HTML report outside the intended output directory."
+    severity: low
+    stride: T
+    cwe: CWE-22
+    suggested_mitigations: [M012]
