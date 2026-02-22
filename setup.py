@@ -8,7 +8,7 @@ long_desc = readme.read_text(encoding="utf-8") if readme.exists() else ""
 
 setup(
     name="tmdd",
-    version="0.5.0",
+    version="0.5.1",
     description="Threat Modeling Driven Development - YAML-based threat modeling framework",
     long_description=long_desc,
     long_description_content_type="text/markdown",

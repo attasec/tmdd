@@ -13,6 +13,9 @@ features:
       T001: default
       T006: default
       T007: default
+    last_updated: "2026-02-22"
+    reviewed_by: "mik0w"
+    reviewed_at: "2026-02-22"
 
   - name: "Threat Model Validation"
     goal: "Validate all .tmdd/ YAML files for structural correctness and cross-reference integrity"
@@ -23,6 +26,9 @@ features:
     threats:
       T005: default
       T008: accepted
+    last_updated: "2026-02-22"
+    reviewed_by: "mik0w"
+    reviewed_at: "2026-02-22"
 
   - name: "Feature Workflow"
     goal: "Generate AI prompts for threat modeling new features or producing secure implementation guidance"
@@ -33,6 +39,9 @@ features:
     threats:
       T009: default
       T007: default
+    last_updated: "2026-02-22"
+    reviewed_by: "mik0w"
+    reviewed_at: "2026-02-22"
 
   - name: "Compilation"
     goal: "Generate consolidated YAML and AI implementation prompts from the full threat model"
@@ -43,19 +52,26 @@ features:
     threats:
       T007: default
       T009: default
+    last_updated: "2026-02-22"
+    reviewed_by: "mik0w"
+    reviewed_at: "2026-02-22"
 
   - name: "Report Generation"
     goal: "Generate a standalone interactive HTML threat model report with architecture diagram"
-    input_data: [path to .tmdd directory]
+    input_data: [path to .tmdd directory, output directory, output filename]
     output_data: [HTML report file with embedded Cytoscape.js diagram]
-    data_flows: [df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
-    threat_actors: [TA001, TA002]
+    data_flows: [df_developer_to_cli, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
+    threat_actors: [TA001, TA002, TA003]
     threats:
       T002: default
       T003: default
       T004: default
       T007: default
       T010: default
+      T011: default
+    last_updated: "2026-02-22"
+    reviewed_by: "mik0w"
+    reviewed_at: "2026-01-01"
 
   - name: "Diagram Generation"
     goal: "Generate a standalone interactive HTML architecture diagram with optional feature highlighting"
@@ -68,3 +84,6 @@ features:
       T003: default
       T004: default
       T010: default
+    last_updated: "2026-02-22"
+    reviewed_by: "mik0w"
+    reviewed_at: "2026-02-22"

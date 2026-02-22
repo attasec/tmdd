@@ -46,9 +46,9 @@ tmdd compile .tmdd                                              # generate outpu
 |------|---------|
 | `system.yaml` | System name, description, version |
 | `actors.yaml` | Who interacts with the system (`id` + `description`) |
-| `components.yaml` | Architecture blocks (`id`, `description`, `type`, `technology`, `trust_boundary`) |
+| `components.yaml` | Architecture blocks (`id`, `description`, `type`, `technology`, `trust_boundary`, optional `source_paths`) |
 | `data_flows.yaml` | Data movement (`id`, `source`, `destination`, `data_description`, `protocol`, `authentication`) |
-| `features.yaml` | Features with threat-to-mitigation mappings |
+| `features.yaml` | Features with threat-to-mitigation mappings (`last_updated`, `reviewed_at`, `reviewed_by`) |
 | `threats/catalog.yaml` | Threat definitions (`T001`: name, description, severity, stride, cwe, suggested_mitigations) |
 | `threats/mitigations.yaml` | Security controls (`M001`: description string or {description, references}) |
 | `threats/threat_actors.yaml` | Adversary profiles (`TA001`: description string) |
@@ -73,10 +73,26 @@ threats:
   T001: default
   T002: [M001, M002]
   T003: accepted
+last_updated: "2026-02-22"   # agent sets to today's date
+reviewed_at: "2000-01-01"    # sentinel — human updates after review
+# reviewed_by: — only set by human reviewer, never by AI agent
 
 # WRONG
 threats: [T001, T002]
 ```
+
+## Human Review Fields
+
+Features support `reviewed_by`, `reviewed_at`, and `last_updated` fields:
+- `reviewed_by` — name/username of the human analyst who reviewed the threat mappings.
+  **AI agents MUST NOT set this.** Only a human adds it after manual review.
+- `reviewed_at` — date of last review (YYYY-MM-DD). AI agents MUST set this to `"2000-01-01"`
+  as a sentinel so that `last_updated > reviewed_at` always triggers a stale-review lint warning.
+  The human updates this to the real date when they review.
+- `last_updated` — date the feature was last created or modified (YYYY-MM-DD).
+  AI agents SHOULD set this to today's date.
+- Lint warns if a feature has `accepted` threats but no `reviewed_by`
+- Lint warns if `last_updated > reviewed_at` (stale review, needs re-review)
 
 ## Threat Quality Rules
 
@@ -98,6 +114,9 @@ For each component/flow: **S**poofing, **T**ampering, **R**epudiation,
 **I**nformation Disclosure, **D**enial of Service, **E**levation of Privilege.
 
 ## Workflow for Adding a Feature
+
+**NEVER overwrite existing YAML content.** Read each file before editing.
+Append new entries and continue existing ID sequences (T006 after T005, etc.).
 
 1. **Analyze the feature's code impact** — new endpoints, DB tables, external calls, sensitive data
 2. Add components/actors/data_flows if the feature introduces new ones

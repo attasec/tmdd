@@ -8,5 +8,5 @@
 system:
   name: "TMDD CLI"
   description: "Threat Modeling Driven Development - a Python CLI tool that manages YAML-based threat models, validates cross-references, generates AI prompts, and produces interactive HTML reports and diagrams"
-  version: "0.5.0"
+  version: "0.5.1"
 

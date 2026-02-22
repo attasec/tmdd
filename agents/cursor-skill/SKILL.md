@@ -87,6 +87,13 @@ Scan for patterns that inform threats directly:
 
 ## Phase 2 — Threat Model Creation
 
+**IMPORTANT — Before editing any YAML file:**
+1. Check if `.tmdd/` already exists and contains populated YAML files
+2. If YES: you are in **incremental mode** — read each file first, then append new
+   entries or edit existing ones. NEVER rewrite a file from scratch. Skip `tmdd init`.
+   Go directly to Phase 3 if adding a feature, or follow Phase 2.2 in append mode.
+3. If NO: you are in **creation mode** — run `tmdd init`, then populate files per Phase 2.2
+
 ### 2.1 New Project (no `.tmdd/` directory)
 
 ```bash
@@ -101,6 +108,13 @@ After init, replace the template content with architecture-specific data from Ph
 
 **YOU MUST EDIT THE FILES DIRECTLY. DO NOT JUST OUTPUT YAML.**
 
+**NEVER overwrite existing content.** Before editing any YAML file:
+1. Read the file first to see what entries already exist
+2. Append new entries — do not remove or rewrite existing ones unless
+   the user explicitly asks for changes to specific entries
+3. When adding threats/mitigations, continue the existing ID sequence
+   (e.g., if T005 exists, start new threats at T006)
+
 Edit these files using the analysis from Phase 1:
 
 #### 1. `components.yaml` — Map real code to components
@@ -112,12 +126,19 @@ components:
     type: api                  # frontend|api|service|database|queue|external|cache|other
     technology: "Node.js / Express"
     trust_boundary: public     # public|internal|external
+    source_paths:              # OPTIONAL - glob patterns mapping to source files
+      - "src/routes/**"
+      - "src/middleware/**"
+      - "src/server.ts"
 ```
 
 **Rules:**
 - One component per distinct architectural unit discovered in Phase 1
 - `description` must mention the actual technology and what it does in this project
 - `trust_boundary` must reflect the real deployment (not assumed)
+- `source_paths` (optional) should list glob patterns for source files that belong to this
+  component. This enables deterministic PR-to-component mapping for threat review workflows.
+  Prefer specific globs over overly broad ones (e.g., `src/routes/**` over `src/**`).
 
 #### 2. `actors.yaml` — Real users and external systems
 
@@ -211,12 +232,25 @@ features:
       T001: default               # inherit suggested_mitigations from catalog
       T002: [M003, M005]          # explicit mitigation override
       T003: accepted              # risk deliberately accepted
+    last_updated: "2026-02-22"    # set by agent to today's date
+    reviewed_at: "2000-01-01"     # SENTINEL — forces stale-review lint warning
+    # reviewed_by: — DO NOT SET. Only a human adds this after manual review.
 ```
 
 **Threat mapping values:**
 - `default` — inherit `suggested_mitigations` from `threats/catalog.yaml` (preferred when suggestions fit)
 - `[M001, M002]` — explicit mitigation list (override when you need different controls)
 - `accepted` — risk deliberately accepted without mitigation
+
+**Review fields (human-only attestation):**
+- `reviewed_by` — name/username of the human analyst who verified the threat mappings.
+  **AI agents MUST NOT set this field.** Only a human adds it after manual review.
+- `reviewed_at` — date of last review (YYYY-MM-DD). AI agents MUST set this to `"2000-01-01"`
+  as a sentinel so that `last_updated > reviewed_at` always triggers a stale-review lint warning.
+  The human updates this to the real date when they review.
+- `last_updated` — date the feature was last created or modified (YYYY-MM-DD).
+  AI agents SHOULD set this to today's date.
+- Features with `accepted` threats and no `reviewed_by` trigger a lint warning
 
 ```yaml
 # CORRECT
@@ -252,7 +286,7 @@ tmdd feature "Feature Name" -d "What it does"
 # Step 2: Read the generated prompt
 # .tmdd/out/<feature_name>.threatmodel.txt
 
-# Step 3: Edit YAML files using findings from 3.1 (follow Phase 2 order)
+# Step 3: Edit YAML files using findings from 3.1 (follow order in 3.3 below)
 
 # Step 4: Validate
 tmdd lint .tmdd
@@ -323,6 +357,8 @@ components:
     type: api                   # frontend|api|service|database|queue|external|cache|other
     technology: "Node.js"       # optional
     trust_boundary: internal    # public|internal|external
+    source_paths:               # optional - glob patterns for source files
+      - "src/routes/**"
 ```
 
 ### data_flows.yaml
@@ -384,6 +420,9 @@ features:
       T001: default               # use catalog's suggested_mitigations
       T002: [M003, M005]          # explicit mitigation override
       T003: accepted              # risk accepted without mitigation
+    last_updated: "2026-02-22"   # agent sets to today's date
+    reviewed_at: "2000-01-01"    # sentinel — human updates after review
+    # reviewed_by: — only set by human reviewer, never by AI agent
 ```
 
 ## Cross-Reference Rules (enforced by lint)
@@ -405,4 +444,5 @@ Before finishing edits, verify:
 - [ ] Threat names/descriptions reference specific components, endpoints, or files
 - [ ] Mitigations reference actual or planned implementation files where possible
 - [ ] data_flows source/destination exist in actors or components
+- [ ] Existing entries in all YAML files were preserved (no accidental overwrites)
 - [ ] Run `tmdd lint .tmdd` and fix all errors
