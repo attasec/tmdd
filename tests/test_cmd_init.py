@@ -20,7 +20,7 @@ class TestCmdInit:
         assert (dest / "components.yaml").exists()
         assert (dest / "data_flows.yaml").exists()
         assert (dest / "features.yaml").exists()
-        assert (dest / "threats" / "catalog.yaml").exists()
+        assert (dest / "threats" / "threats.yaml").exists()
         assert (dest / "threats" / "mitigations.yaml").exists()
         assert (dest / "threats" / "threat_actors.yaml").exists()
 

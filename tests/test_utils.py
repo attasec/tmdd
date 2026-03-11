@@ -136,9 +136,9 @@ class TestLoadThreatModel:
         assert len(tm["components"]) == 3
         assert len(tm["data_flows"]) == 3
         assert len(tm["features"]) == 1
-        assert "T001" in tm["threats"]
-        assert "M001" in tm["mitigations"]
-        assert "TA01" in tm["threat_actors"]
+        assert "sql_injection" in tm["threats"]
+        assert "parameterized_queries" in tm["mitigations"]
+        assert any(ta.get("id") == "external_attacker" for ta in tm["threat_actors"])
 
     def test_nonexistent_dir_raises(self, tmp_path):
         with pytest.raises(ModelNotFoundError):

@@ -8,11 +8,11 @@ features:
     input_data: [path, system name, description, template name]
     output_data: [YAML files in target directory]
     data_flows: [df_developer_to_cli, df_cli_to_commands, df_init_templates]
-    threat_actors: [TA003]
+    threat_actors: [ci_pipeline_untrusted]
     threats:
-      T001: default
-      T006: default
-      T007: default
+      yaml_template_injection: default
+      init_path_traversal: default
+      output_info_disclosure: default
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
@@ -22,10 +22,10 @@ features:
     input_data: [path to .tmdd directory]
     output_data: [validation results on stdout]
     data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem]
-    threat_actors: [TA002]
+    threat_actors: [malicious_insider_fs]
     threats:
-      T005: default
-      T008: accepted
+      yaml_dos_oversized: default
+      no_audit_trail: accepted
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
@@ -35,10 +35,10 @@ features:
     input_data: [feature name, description, loaded threat model]
     output_data: [prompt text files in .tmdd/out/]
     data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem, df_filesystem_to_agent]
-    threat_actors: [TA002]
+    threat_actors: [malicious_insider_fs]
     threats:
-      T009: default
-      T007: default
+      prompt_injection: default
+      output_info_disclosure: default
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
@@ -48,10 +48,10 @@ features:
     input_data: [path to .tmdd directory, optional feature filter]
     output_data: [consolidated .tm.yaml file, prompt text file in .tmdd/out/]
     data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem]
-    threat_actors: [TA002]
+    threat_actors: [malicious_insider_fs]
     threats:
-      T007: default
-      T009: default
+      output_info_disclosure: default
+      prompt_injection: default
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
@@ -61,14 +61,14 @@ features:
     input_data: [path to .tmdd directory, output directory, output filename]
     output_data: [HTML report file with embedded Cytoscape.js diagram]
     data_flows: [df_developer_to_cli, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
-    threat_actors: [TA001, TA002, TA003]
+    threat_actors: [cdn_package_attacker, malicious_insider_fs, ci_pipeline_untrusted]
     threats:
-      T002: default
-      T003: default
-      T004: default
-      T007: default
-      T010: default
-      T011: default
+      cdn_supply_chain_attack: default
+      xss_stored_diagram: default
+      xss_stored_node_info: default
+      output_info_disclosure: default
+      json_script_breakout: default
+      report_path_traversal: default
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-01-01"
@@ -78,12 +78,12 @@ features:
     input_data: [path to .tmdd directory, optional feature name]
     output_data: [HTML diagram file with embedded Cytoscape.js visualization]
     data_flows: [df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
-    threat_actors: [TA001, TA002]
+    threat_actors: [cdn_package_attacker, malicious_insider_fs]
     threats:
-      T002: default
-      T003: default
-      T004: default
-      T010: default
+      cdn_supply_chain_attack: default
+      xss_stored_diagram: default
+      xss_stored_node_info: default
+      json_script_breakout: default
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"

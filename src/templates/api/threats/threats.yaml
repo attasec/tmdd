@@ -1,50 +1,49 @@
 # Threat Catalog - API-specific threats (OWASP API Top 10)
 threats:
-  T001:
+  broken_object_auth:
     name: Broken Object Level Authorization
     description: API exposes endpoints without proper authorization checks
     severity: critical
     stride: E
     cwe: CWE-639
-    suggested_mitigations: [M001, M002]
+    suggested_mitigations: [object_level_authz, uuid_identifiers]
 
-  T002:
+  broken_auth:
     name: Broken Authentication
     description: Weak API key management or token validation
     severity: critical
     stride: S
     cwe: CWE-287
-    suggested_mitigations: [M003, M004]
+    suggested_mitigations: [short_lived_tokens, api_key_rotation]
 
-  T003:
+  excessive_data_exposure:
     name: Excessive Data Exposure
     description: API returns more data than necessary
     severity: medium
     stride: I
     cwe: CWE-200
-    suggested_mitigations: [M005]
+    suggested_mitigations: [response_filtering]
 
-  T004:
+  lack_of_rate_limiting:
     name: Lack of Rate Limiting
     description: API doesn't limit request frequency
     severity: medium
     stride: D
     cwe: CWE-770
-    suggested_mitigations: [M006]
+    suggested_mitigations: [rate_limiting]
 
-  T005:
+  injection:
     name: Injection
     description: Unsanitized input in queries or commands
     severity: high
     stride: T
     cwe: CWE-89
-    suggested_mitigations: [M007, M008]
+    suggested_mitigations: [parameterized_queries, input_validation]
 
-  T006:
+  mass_assignment:
     name: Mass Assignment
     description: API binds client input to internal objects without filtering
     severity: medium
     stride: T
     cwe: CWE-915
-    suggested_mitigations: [M009]
-
+    suggested_mitigations: [property_allowlist]

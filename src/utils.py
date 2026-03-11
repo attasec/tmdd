@@ -130,7 +130,7 @@ def load_threat_model(model_dir):
         "components": load_yaml(model_path / "components.yaml").get("components", []),
         "features": load_yaml(model_path / "features.yaml").get("features", []),
         "data_flows": load_yaml(model_path / "data_flows.yaml").get("data_flows", []),
-        "threats": load_yaml(threats_path / "catalog.yaml").get("threats", {}),
+        "threats": load_yaml(threats_path / "threats.yaml").get("threats", {}),
         "mitigations": load_yaml(threats_path / "mitigations.yaml").get("mitigations", {}),
-        "threat_actors": load_yaml(threats_path / "threat_actors.yaml").get("threat_actors", {}),
+        "threat_actors": load_yaml(threats_path / "threat_actors.yaml").get("threat_actors", []),
     }

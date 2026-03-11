@@ -52,13 +52,13 @@ flowchart TD
 Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 **Data Flows:** `df_developer_to_cli`, `df_cli_to_commands`, `df_init_templates`  
-**Threat Actors:** `TA003`
+**Threat Actors:** `ci_pipeline_untrusted`
 
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
-| 🟢 | `T001` YAML template injection via init command name/description | **T** | `M001` *(default)* |
-| 🟢 | `T006` Arbitrary file creation via init command path argument | **T** | `M007` *(default)* |
-| 🟡 | `T007` Information disclosure via generated output files | **I** | `M008` *(default)* |
+| 🟢 | `yaml_template_injection` YAML template injection via init command name/description | **T** | `yaml_escape_init_input` *(default)* |
+| 🟢 | `init_path_traversal` Arbitrary file creation via init command path argument | **T** | `validate_init_path` *(default)* |
+| 🟡 | `output_info_disclosure` Information disclosure via generated output files | **I** | `gitignore_output_dir` *(default)* |
 
 ### Threat Model Validation
 
@@ -67,12 +67,12 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 **Data Flows:** `df_developer_to_cli`, `df_cli_to_commands`, `df_commands_to_yaml`, `df_yaml_to_filesystem`  
-**Threat Actors:** `TA002`
+**Threat Actors:** `malicious_insider_fs`
 
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
-| 🟢 | `T005` Denial of service via deeply nested or oversized YAML files | **D** | `M006` *(default)* |
-| 🟡 | `T008` No audit trail for threat model modifications | **R** | **Risk accepted** |
+| 🟢 | `yaml_dos_oversized` Denial of service via deeply nested or oversized YAML files | **D** | `yaml_file_size_limit` *(default)* |
+| 🟡 | `no_audit_trail` No audit trail for threat model modifications | **R** | **Risk accepted** |
 
 ### Feature Workflow
 
@@ -81,12 +81,12 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 **Data Flows:** `df_developer_to_cli`, `df_cli_to_commands`, `df_commands_to_yaml`, `df_yaml_to_filesystem`, `df_commands_to_prompts`, `df_prompts_to_filesystem`, `df_filesystem_to_agent`  
-**Threat Actors:** `TA002`
+**Threat Actors:** `malicious_insider_fs`
 
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
-| 🟡 | `T009` Prompt injection via threat model content in generated AI prompts | **T** | `M010` *(default)* |
-| 🟡 | `T007` Information disclosure via generated output files | **I** | `M008` *(default)* |
+| 🟡 | `prompt_injection` Prompt injection via threat model content in generated AI prompts | **T** | `prompt_delimiters` *(default)* |
+| 🟡 | `output_info_disclosure` Information disclosure via generated output files | **I** | `gitignore_output_dir` *(default)* |
 
 ### Compilation
 
@@ -95,12 +95,12 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 **Data Flows:** `df_developer_to_cli`, `df_cli_to_commands`, `df_commands_to_yaml`, `df_yaml_to_filesystem`, `df_commands_to_prompts`, `df_prompts_to_filesystem`  
-**Threat Actors:** `TA002`
+**Threat Actors:** `malicious_insider_fs`
 
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
-| 🟡 | `T007` Information disclosure via generated output files | **I** | `M008` *(default)* |
-| 🟡 | `T009` Prompt injection via threat model content in generated AI prompts | **T** | `M010` *(default)* |
+| 🟡 | `output_info_disclosure` Information disclosure via generated output files | **I** | `gitignore_output_dir` *(default)* |
+| 🟡 | `prompt_injection` Prompt injection via threat model content in generated AI prompts | **T** | `prompt_delimiters` *(default)* |
 
 ### Report Generation
 
@@ -109,16 +109,16 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 Updated: 2026-02-22 · ⚠️ Reviewed by mik0w (2026-01-01) — **needs re-review**
 
 **Data Flows:** `df_developer_to_cli`, `df_commands_to_yaml`, `df_yaml_to_filesystem`, `df_commands_to_html`, `df_html_to_filesystem`, `df_cdn_to_browser`, `df_filesystem_to_viewer`  
-**Threat Actors:** `TA001`, `TA002`, `TA003`
+**Threat Actors:** `cdn_package_attacker`, `malicious_insider_fs`, `ci_pipeline_untrusted`
 
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
-| 🟠 | `T002` Supply chain attack via CDN JavaScript dependencies | **T** | `M002`, `M003` *(default)* |
-| 🟡 | `T003` Stored XSS via innerHTML in diagram JavaScript | **T** | `M004`, `M005` *(default)* |
-| 🟡 | `T004` Stored XSS via innerHTML in node-info panel | **T** | `M004`, `M005` *(default)* |
-| 🟡 | `T007` Information disclosure via generated output files | **I** | `M008` *(default)* |
-| 🟢 | `T010` Script tag breakout in embedded JSON diagram data | **T** | `M005`, `M011` *(default)* |
-| 🟢 | `T011` Report output path traversal via --name parameter | **T** | `M012` *(default)* |
+| 🟠 | `cdn_supply_chain_attack` Supply chain attack via CDN JavaScript dependencies | **T** | `sri_hashes_cdn`, `bundle_libs_locally` *(default)* |
+| 🟡 | `xss_stored_diagram` Stored XSS via innerHTML in diagram JavaScript | **T** | `replace_innerhtml_textcontent`, `js_html_escape_helper` *(default)* |
+| 🟡 | `xss_stored_node_info` Stored XSS via innerHTML in node-info panel | **T** | `replace_innerhtml_textcontent`, `js_html_escape_helper` *(default)* |
+| 🟡 | `output_info_disclosure` Information disclosure via generated output files | **I** | `gitignore_output_dir` *(default)* |
+| 🟢 | `json_script_breakout` Script tag breakout in embedded JSON diagram data | **T** | `js_html_escape_helper`, `enhanced_safe_json` *(default)* |
+| 🟢 | `report_path_traversal` Report output path traversal via --name parameter | **T** | `validate_report_filename` *(default)* |
 
 ### Diagram Generation
 
@@ -127,14 +127,14 @@ Updated: 2026-02-22 · ⚠️ Reviewed by mik0w (2026-01-01) — **needs re-revi
 Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 **Data Flows:** `df_commands_to_yaml`, `df_yaml_to_filesystem`, `df_commands_to_html`, `df_html_to_filesystem`, `df_cdn_to_browser`, `df_filesystem_to_viewer`  
-**Threat Actors:** `TA001`, `TA002`
+**Threat Actors:** `cdn_package_attacker`, `malicious_insider_fs`
 
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
-| 🟠 | `T002` Supply chain attack via CDN JavaScript dependencies | **T** | `M002`, `M003` *(default)* |
-| 🟡 | `T003` Stored XSS via innerHTML in diagram JavaScript | **T** | `M004`, `M005` *(default)* |
-| 🟡 | `T004` Stored XSS via innerHTML in node-info panel | **T** | `M004`, `M005` *(default)* |
-| 🟢 | `T010` Script tag breakout in embedded JSON diagram data | **T** | `M005`, `M011` *(default)* |
+| 🟠 | `cdn_supply_chain_attack` Supply chain attack via CDN JavaScript dependencies | **T** | `sri_hashes_cdn`, `bundle_libs_locally` *(default)* |
+| 🟡 | `xss_stored_diagram` Stored XSS via innerHTML in diagram JavaScript | **T** | `replace_innerhtml_textcontent`, `js_html_escape_helper` *(default)* |
+| 🟡 | `xss_stored_node_info` Stored XSS via innerHTML in node-info panel | **T** | `replace_innerhtml_textcontent`, `js_html_escape_helper` *(default)* |
+| 🟢 | `json_script_breakout` Script tag breakout in embedded JSON diagram data | **T** | `js_html_escape_helper`, `enhanced_safe_json` *(default)* |
 
 ---
 
@@ -174,17 +174,17 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 | ID | Name | Severity | STRIDE | CWE | Suggested Mitigations | Mapped? |
 |:---|:---|:---:|:---:|:---:|:---|:---:|
-| `T001` | **YAML template injection via init command name/description** | 🟢 LOW | **T** Tampering | `CWE-74` | `M001` | ✅ |
-| `T002` | **Supply chain attack via CDN JavaScript dependencies** | 🟠 HIGH | **T** Tampering | `CWE-829` | `M002, M003` | ✅ |
-| `T003` | **Stored XSS via innerHTML in diagram JavaScript** | 🟡 MEDIUM | **T** Tampering | `CWE-79` | `M004, M005` | ✅ |
-| `T004` | **Stored XSS via innerHTML in node-info panel** | 🟡 MEDIUM | **T** Tampering | `CWE-79` | `M004, M005` | ✅ |
-| `T005` | **Denial of service via deeply nested or oversized YAML files** | 🟢 LOW | **D** Denial of Service | `CWE-400` | `M006` | ✅ |
-| `T006` | **Arbitrary file creation via init command path argument** | 🟢 LOW | **T** Tampering | `CWE-22` | `M007` | ✅ |
-| `T007` | **Information disclosure via generated output files** | 🟡 MEDIUM | **I** Info Disclosure | `CWE-200` | `M008` | ✅ |
-| `T008` | **No audit trail for threat model modifications** | 🟡 MEDIUM | **R** Repudiation | `CWE-778` | `M009` | ✅ |
-| `T009` | **Prompt injection via threat model content in generated AI prompts** | 🟡 MEDIUM | **T** Tampering | `CWE-77` | `M010` | ✅ |
-| `T010` | **Script tag breakout in embedded JSON diagram data** | 🟢 LOW | **T** Tampering | `CWE-79` | `M005, M011` | ✅ |
-| `T011` | **Report output path traversal via --name parameter** | 🟢 LOW | **T** Tampering | `CWE-22` | `M012` | ✅ |
+| `yaml_template_injection` | **YAML template injection via init command name/description** | 🟢 LOW | **T** Tampering | `CWE-74` | `yaml_escape_init_input` | ✅ |
+| `cdn_supply_chain_attack` | **Supply chain attack via CDN JavaScript dependencies** | 🟠 HIGH | **T** Tampering | `CWE-829` | `sri_hashes_cdn, bundle_libs_locally` | ✅ |
+| `xss_stored_diagram` | **Stored XSS via innerHTML in diagram JavaScript** | 🟡 MEDIUM | **T** Tampering | `CWE-79` | `replace_innerhtml_textcontent, js_html_escape_helper` | ✅ |
+| `xss_stored_node_info` | **Stored XSS via innerHTML in node-info panel** | 🟡 MEDIUM | **T** Tampering | `CWE-79` | `replace_innerhtml_textcontent, js_html_escape_helper` | ✅ |
+| `yaml_dos_oversized` | **Denial of service via deeply nested or oversized YAML files** | 🟢 LOW | **D** Denial of Service | `CWE-400` | `yaml_file_size_limit` | ✅ |
+| `init_path_traversal` | **Arbitrary file creation via init command path argument** | 🟢 LOW | **T** Tampering | `CWE-22` | `validate_init_path` | ✅ |
+| `output_info_disclosure` | **Information disclosure via generated output files** | 🟡 MEDIUM | **I** Info Disclosure | `CWE-200` | `gitignore_output_dir` | ✅ |
+| `no_audit_trail` | **No audit trail for threat model modifications** | 🟡 MEDIUM | **R** Repudiation | `CWE-778` | `git_change_tracking` | ✅ |
+| `prompt_injection` | **Prompt injection via threat model content in generated AI prompts** | 🟡 MEDIUM | **T** Tampering | `CWE-77` | `prompt_delimiters` | ✅ |
+| `json_script_breakout` | **Script tag breakout in embedded JSON diagram data** | 🟢 LOW | **T** Tampering | `CWE-79` | `js_html_escape_helper, enhanced_safe_json` | ✅ |
+| `report_path_traversal` | **Report output path traversal via --name parameter** | 🟢 LOW | **T** Tampering | `CWE-22` | `validate_report_filename` | ✅ |
 
 ## Mitigations Catalog
 
@@ -192,18 +192,18 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 | ID | Description | Applied? |
 |:---|:---|:---:|
-| `M001` | Escape or quote user-provided name/description values before substituting into YAML templates during init, using yaml.dump() or proper YAML string quoting to prevent structural injection (`src/commands/init.py`:36-39) | ✅ |
-| `M002` | Pin CDN library versions with Subresource Integrity (SRI) hashes on all <script> tags in generated HTML to prevent tampered JavaScript from executing (`report.py`:943-945, `diagram.py`:143-145) | ✅ |
-| `M003` | Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing (`report.py`:943-945) | ✅ |
-| `M004` | Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction (`report.py`:572-872) | ✅ |
-| `M005` | Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings (`report.py`:572-872) | ✅ |
-| `M006` | Add file size checks in load_yaml() before parsing, rejecting YAML files exceeding a reasonable threshold (e.g., 1MB) to prevent resource exhaustion (`src/utils.py`:101-117) | ✅ |
-| `M007` | Validate and normalize the target path in init command, ensuring it resolves to a subdirectory of the current working directory or an explicitly allowed location (`src/commands/init.py`:22-23) | ✅ |
-| `M008` | Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis (`src/commands/init.py`) | ✅ |
-| `M009` | Rely on Git version control for change tracking and attribution of .tmdd/ YAML files; document this requirement in README and generated AGENTS.md | — |
-| `M010` | Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content (`src/generators/agent_prompt.py`:17-19, `src/generators/threat_prompt.py`) | ✅ |
-| `M011` | Enhance _safe_json() to escape additional dangerous characters beyond </ including HTML entities and ensure Content-Type is set correctly for embedded JSON data (`report.py`:113-114) | ✅ |
-| `M012` | Validate the --name output filename in report.py by stripping path separators and applying safe_name() or os.path.basename() before joining with the output directory, consistent with diagram.py's safe_name() approach (`report.py`:1085-1088) | ✅ |
+| `yaml_escape_init_input` | Escape or quote user-provided name/description values before substituting into YAML templates during init, using yaml.dump() or proper YAML string quoting to prevent structural injection (`src/commands/init.py`:36-39) | ✅ |
+| `sri_hashes_cdn` | Pin CDN library versions with Subresource Integrity (SRI) hashes on all <script> tags in generated HTML to prevent tampered JavaScript from executing (`report.py`:943-945, `diagram.py`:143-145) | ✅ |
+| `bundle_libs_locally` | Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing (`report.py`:943-945) | ✅ |
+| `replace_innerhtml_textcontent` | Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction (`report.py`:572-872) | ✅ |
+| `js_html_escape_helper` | Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings (`report.py`:572-872) | ✅ |
+| `yaml_file_size_limit` | Add file size checks in load_yaml() before parsing, rejecting YAML files exceeding a reasonable threshold (e.g., 1MB) to prevent resource exhaustion (`src/utils.py`:101-117) | ✅ |
+| `validate_init_path` | Validate and normalize the target path in init command, ensuring it resolves to a subdirectory of the current working directory or an explicitly allowed location (`src/commands/init.py`:22-23) | ✅ |
+| `gitignore_output_dir` | Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis (`src/commands/init.py`) | ✅ |
+| `git_change_tracking` | Rely on Git version control for change tracking and attribution of .tmdd/ YAML files; document this requirement in README and generated AGENTS.md | — |
+| `prompt_delimiters` | Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content (`src/generators/agent_prompt.py`:17-19, `src/generators/threat_prompt.py`) | ✅ |
+| `enhanced_safe_json` | Enhance _safe_json() to escape additional dangerous characters beyond </ including HTML entities and ensure Content-Type is set correctly for embedded JSON data (`report.py`:113-114) | ✅ |
+| `validate_report_filename` | Validate the --name output filename in report.py by stripping path separators and applying safe_name() or os.path.basename() before joining with the output directory, consistent with diagram.py's safe_name() approach (`report.py`:1085-1088) | ✅ |
 
 ## Actors
 
@@ -215,9 +215,9 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 ### Threat Actors
 
-- **`TA001`** — External attacker who compromises a CDN or npm package used by TMDD-generated HTML reports
-- **`TA002`** — Malicious insider with filesystem access who tampers with .tmdd/ YAML files to inject harmful content into reports or AI prompts
-- **`TA003`** — Automated CI/CD pipeline that invokes TMDD commands with untrusted or user-controlled input parameters
+- **`cdn_package_attacker`** — External attacker who compromises a CDN or npm package used by TMDD-generated HTML reports
+- **`malicious_insider_fs`** — Malicious insider with filesystem access who tampers with .tmdd/ YAML files to inject harmful content into reports or AI prompts
+- **`ci_pipeline_untrusted`** — Automated CI/CD pipeline that invokes TMDD commands with untrusted or user-controlled input parameters
 
 ---
 

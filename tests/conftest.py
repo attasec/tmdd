@@ -64,62 +64,62 @@ FEATURES_YAML = textwrap.dedent("""\
         input_data: [credentials]
         output_data: [session_token]
         data_flows: [df_user_to_web, df_web_to_api]
-        threat_actors: [TA01]
+        threat_actors: [external_attacker]
         threats:
-          T001: [M001]
-          T002: accepted
+          sql_injection: [parameterized_queries]
+          brute_force: accepted
         last_updated: "2025-01-01"
 """)
 
 CATALOG_YAML = textwrap.dedent("""\
     threats:
-      T001:
+      sql_injection:
         name: SQL Injection
         description: Attacker injects SQL
         severity: high
         stride: T
         cwe: CWE-89
-        suggested_mitigations: [M001]
-      T002:
+        suggested_mitigations: [parameterized_queries]
+      brute_force:
         name: Brute Force
         description: Attacker brute-forces credentials
         severity: medium
         stride: S
         cwe: CWE-307
-        suggested_mitigations: [M002]
+        suggested_mitigations: [account_lockout]
 """)
 
 MITIGATIONS_YAML = textwrap.dedent("""\
     mitigations:
-      M001: Use parameterized queries
-      M002: Implement account lockout
+      parameterized_queries: Use parameterized queries
+      account_lockout: Implement account lockout
 """)
 
-# Mitigations with rich format (code references)
 MITIGATIONS_RICH_YAML = textwrap.dedent("""\
     mitigations:
-      M001:
+      parameterized_queries:
         description: Use parameterized queries
         references:
           - file: "src/db/queries.ts"
             lines: "42-58"
-      M002: Implement account lockout
+      account_lockout: Implement account lockout
 """)
 
 THREAT_ACTORS_YAML = textwrap.dedent("""\
     threat_actors:
-      TA01: External attacker via internet
-      TA02: Malicious insider
+      - id: external_attacker
+        description: External attacker via internet
+      - id: malicious_insider
+        description: Malicious insider
 """)
 
-# Mapping of filename -> content for the complete valid model
 VALID_MODEL_FILES = {
     "system.yaml": SYSTEM_YAML,
     "actors.yaml": ACTORS_YAML,
     "components.yaml": COMPONENTS_YAML,
     "data_flows.yaml": DATA_FLOWS_YAML,
     "features.yaml": FEATURES_YAML,
-    "threats/catalog.yaml": CATALOG_YAML,
+    "threats/threats.yaml": CATALOG_YAML,
     "threats/mitigations.yaml": MITIGATIONS_YAML,
     "threats/threat_actors.yaml": THREAT_ACTORS_YAML,
 }

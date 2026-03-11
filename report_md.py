@@ -371,7 +371,7 @@ def generate_markdown_report(threat_model, system_name):
     data_flows = threat_model.get("data_flows", [])
     threats = threat_model.get("threats", {})
     mitigations = threat_model.get("mitigations", {})
-    threat_actors = threat_model.get("threat_actors", {})
+    threat_actors = threat_model.get("threat_actors", [])
 
     # Compute usage stats
     total_threats_used = set()
@@ -482,8 +482,9 @@ def generate_markdown_report(threat_model, system_name):
     if threat_actors:
         doc.append("### Threat Actors")
         doc.append("")
-        for ta_id, ta_desc in threat_actors.items():
-            doc.append(f"- **`{ta_id}`** — {ta_desc}")
+        for ta in threat_actors:
+            if isinstance(ta, dict):
+                doc.append(f"- **`{ta.get('id', '')}`** — {ta.get('description', '')}")
         doc.append("")
 
     # Footer

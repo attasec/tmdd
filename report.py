@@ -961,7 +961,7 @@ def generate_html_report(threat_model, system_name):
     data_flows = threat_model.get("data_flows", [])
     threats = threat_model.get("threats", {})
     mitigations = threat_model.get("mitigations", {})
-    threat_actors = threat_model.get("threat_actors", {})
+    threat_actors = threat_model.get("threat_actors", [])
 
     # Active usage stats
     total_threats_used = set()
@@ -994,8 +994,8 @@ def generate_html_report(threat_model, system_name):
 
     system_actors_html = _build_actor_items(actors)
     actors_html = "\n".join(
-        f'<div class="actor-item"><code>{_esc(ta_id)}</code>: {_esc(ta_desc)}</div>'
-        for ta_id, ta_desc in threat_actors.items()
+        f'<div class="actor-item"><code>{_esc(ta.get("id", ""))}</code>: {_esc(ta.get("description", ""))}</div>'
+        for ta in threat_actors if isinstance(ta, dict)
     )
 
     diagram_section = _build_interactive_diagram(threat_model)

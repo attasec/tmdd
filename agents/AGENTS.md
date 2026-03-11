@@ -35,7 +35,7 @@ tmdd compile .tmdd                                              # generate outpu
 1. `components.yaml` — one component per real architectural unit, with actual technology
 2. `actors.yaml` — real users and external systems
 3. `data_flows.yaml` — traced from actual code paths, with specific data types
-4. `threats/catalog.yaml` — threats referencing specific components, endpoints, or files
+4. `threats/threats.yaml` — threats referencing specific components, endpoints, or files
 5. `threats/mitigations.yaml` — controls with code references to implementation files
 6. `threats/threat_actors.yaml` — adversary profiles
 7. `features.yaml` — features with threat-to-mitigation dict mapping
@@ -49,36 +49,38 @@ tmdd compile .tmdd                                              # generate outpu
 | `components.yaml` | Architecture blocks (`id`, `description`, `type`, `technology`, `trust_boundary`, optional `source_paths`) |
 | `data_flows.yaml` | Data movement (`id`, `source`, `destination`, `data_description`, `protocol`, `authentication`) |
 | `features.yaml` | Features with threat-to-mitigation mappings (`last_updated`, `reviewed_at`, `reviewed_by`) |
-| `threats/catalog.yaml` | Threat definitions (`T001`: name, description, severity, stride, cwe, suggested_mitigations) |
-| `threats/mitigations.yaml` | Security controls (`M001`: description string or {description, references}) |
-| `threats/threat_actors.yaml` | Adversary profiles (`TA001`: description string) |
+| `threats/threats.yaml` | Threat definitions (symbolic ID: name, description, severity, stride, cwe, suggested_mitigations) |
+| `threats/mitigations.yaml` | Security controls (symbolic ID: description string or {description, references}) |
+| `threats/threat_actors.yaml` | Adversary profiles (list of {id, description}) |
 
 ## ID Conventions
 
+All IDs use the same pattern: `^[a-z][a-z0-9_]*$` — lowercase descriptive names.
+
 - Entities: `^[a-z][a-z0-9_]*$` (e.g. `api_backend`)
-- Threats: `^T\d+$` (e.g. `T001`)
-- Mitigations: `^M\d+$` (e.g. `M001`)
-- Threat Actors: `^TA\d+$` (e.g. `TA001`)
+- Threats: `^[a-z][a-z0-9_]*$` (e.g. `sql_injection`)
+- Mitigations: `^[a-z][a-z0-9_]*$` (e.g. `parameterized_queries`)
+- Threat Actors: `^[a-z][a-z0-9_]*$` (e.g. `external_attacker`)
 
 ## Critical: Feature Threat Format
 
 The `threats` field in `features.yaml` **must** be a dict. Each value is one of:
-- `default` — inherit `suggested_mitigations` from `threats/catalog.yaml`
-- `[M001, M002]` — explicit mitigation list
+- `default` — inherit `suggested_mitigations` from `threats/threats.yaml`
+- `[parameterized_queries, input_validation]` — explicit mitigation list
 - `accepted` — risk accepted
 
 ```yaml
 # CORRECT
 threats:
-  T001: default
-  T002: [M001, M002]
-  T003: accepted
+  sql_injection: default
+  csrf_attack: [csrf_tokens, samesite_cookies]
+  missing_rate_limit: accepted
 last_updated: "2026-02-22"   # agent sets to today's date
 reviewed_at: "2000-01-01"    # sentinel — human updates after review
 # reviewed_by: — only set by human reviewer, never by AI agent
 
 # WRONG
-threats: [T001, T002]
+threats: [sql_injection, csrf_attack]
 ```
 
 ## Human Review Fields
@@ -105,7 +107,7 @@ Features support `reviewed_by`, `reviewed_at`, and `last_updated` fields:
 
 - `data_flows` source/destination must exist in actors or components
 - `features` data_flows/threat_actors must exist in their respective files
-- `features` threat keys must exist in `threats/catalog.yaml`
+- `features` threat keys must exist in `threats/threats.yaml`
 - `features` mitigation values must exist in `threats/mitigations.yaml`
 
 ## STRIDE Checklist
@@ -116,11 +118,11 @@ For each component/flow: **S**poofing, **T**ampering, **R**epudiation,
 ## Workflow for Adding a Feature
 
 **NEVER overwrite existing YAML content.** Read each file before editing.
-Append new entries and continue existing ID sequences (T006 after T005, etc.).
+Append new entries with unique descriptive IDs (don't duplicate existing ones).
 
 1. **Analyze the feature's code impact** — new endpoints, DB tables, external calls, sensitive data
 2. Add components/actors/data_flows if the feature introduces new ones
-3. Add threats to `threats/catalog.yaml` specific to the feature's code 
+3. Add threats to `threats/threats.yaml` specific to the feature's code 
 4. Add mitigations to `threats/mitigations.yaml` with code references
 5. Add feature to `features.yaml` with `threats:` dict mapping
 6. Run `tmdd lint .tmdd` and fix all errors

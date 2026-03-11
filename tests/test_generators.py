@@ -32,22 +32,22 @@ def sample_tm():
                 "goal": "Authenticate users",
                 "data_flows": ["df1"],
                 "threats": {
-                    "T001": ["M001"],
-                    "T002": "accepted",
+                    "sql_injection": ["parameterized_queries"],
+                    "brute_force": "accepted",
                 },
             },
         ],
         "threats": {
-            "T001": {"name": "SQL Injection", "description": "Inject SQL", "severity": "high"},
-            "T002": {"name": "Brute Force", "description": "Brute force attack", "severity": "medium"},
+            "sql_injection": {"name": "SQL Injection", "description": "Inject SQL", "severity": "high"},
+            "brute_force": {"name": "Brute Force", "description": "Brute force attack", "severity": "medium"},
         },
         "mitigations": {
-            "M001": "Use parameterized queries",
-            "M002": "Implement rate limiting",
+            "parameterized_queries": "Use parameterized queries",
+            "rate_limiting": "Implement rate limiting",
         },
-        "threat_actors": {
-            "TA01": "External attacker",
-        },
+        "threat_actors": [
+            {"id": "external_attacker", "description": "External attacker"},
+        ],
     }
 
 
@@ -62,7 +62,7 @@ def empty_tm():
         "features": [],
         "threats": {},
         "mitigations": {},
-        "threat_actors": {},
+        "threat_actors": [],
     }
 
 
@@ -96,7 +96,7 @@ class TestGenerateAgentPrompt:
 
     def test_contains_mitigations(self, sample_tm, tmp_path):
         content = generate_agent_prompt(sample_tm, tmp_path / "p.txt")
-        assert "M001" in content
+        assert "parameterized_queries" in content
         assert "parameterized queries" in content
 
     def test_contains_secure_coding_rules(self, sample_tm, tmp_path):
@@ -141,7 +141,7 @@ class TestGenerateAgentPrompt:
         assert "?" in content
 
     def test_non_dict_threat_skipped(self, empty_tm, tmp_path):
-        empty_tm["threats"] = {"T001": "just a string"}
+        empty_tm["threats"] = {"some_threat": "just a string"}
         content = generate_agent_prompt(empty_tm, tmp_path / "p.txt")
         # Should not crash, and should not contain severity line for T001
         assert "SECURE CODING AGENT" in content
@@ -166,9 +166,9 @@ class TestGenerateThreatModelPrompt:
     def test_contains_existing_context(self, sample_tm):
         result = generate_threat_model_prompt(sample_tm, "X", "Y", ".tmdd")
         assert "web_app" in result
-        assert "T001" in result
-        assert "M001" in result
-        assert "TA01" in result
+        assert "sql_injection" in result
+        assert "parameterized_queries" in result
+        assert "external_attacker" in result
 
     def test_contains_stride_checklist(self, sample_tm):
         result = generate_threat_model_prompt(sample_tm, "X", "Y", ".tmdd")
@@ -205,14 +205,14 @@ class TestRichMitigationsInPrompt:
     def rich_tm(self, sample_tm):
         """A threat model with mixed simple and rich mitigations."""
         sample_tm["mitigations"] = {
-            "M001": {
+            "parameterized_queries": {
                 "description": "Parameterized queries via Prisma",
                 "references": [
                     {"file": "src/db/queries.ts", "lines": "42-58"},
                     {"file": "src/db/utils.ts"},
                 ],
             },
-            "M002": "Simple rate limiting",
+            "rate_limiting": "Simple rate limiting",
         }
         return sample_tm
 
@@ -234,7 +234,7 @@ class TestRichMitigationsInPrompt:
         rich_tm["features"] = [{
             "name": "Login",
             "goal": "Authenticate",
-            "threats": {"T001": ["M001"]},
+            "threats": {"sql_injection": ["parameterized_queries"]},
         }]
         content = generate_agent_prompt(rich_tm, tmp_path / "p.txt", feature_name="Login")
         assert "Parameterized queries via Prisma" in content

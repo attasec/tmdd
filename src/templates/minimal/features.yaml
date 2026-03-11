@@ -7,12 +7,11 @@
 # Format:
 #   - name: Feature Name
 #     goal: What this feature accomplishes
-#     data_flows: [df_x_to_y]        # Data flows involved
-#     threats:                        # Threats and their mitigations
-#       T001: default                # Use catalog's suggested_mitigations
-#       T002: [M001, M002]          # Explicit mitigation override
-#       T003: accepted               # Risk accepted
+#     data_flows: [df_x_to_y]                    # Data flows involved
+#     threats:                                    # Threats and their mitigations
+#       sql_injection: default                   # Use catalog's suggested_mitigations
+#       xss: [input_validation, output_encoding] # Explicit mitigation override
+#       session_fixation: accepted               # Risk accepted
 # =============================================================================
 
 features: []
-
