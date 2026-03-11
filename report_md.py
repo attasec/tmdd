@@ -254,6 +254,24 @@ def _build_mitigations_table(mitigations, total_mitigations_used):
     return "\n".join(rows)
 
 
+def _resolve_mitigations_cell(mids, tinfo, mitigations_catalog):
+    """Resolve mitigation IDs into a compact table cell string."""
+    if mids == "accepted" or (isinstance(mids, dict) and mids.get("status") == "accepted"):
+        return "**Risk accepted**"
+    if mids == "default":
+        resolved = tinfo.get("suggested_mitigations", [])
+        if not isinstance(resolved, list):
+            resolved = []
+        if not resolved:
+            return "*none in catalog*"
+        return ", ".join(f"`{mid}`" for mid in resolved) + " *(default)*"
+    if isinstance(mids, list):
+        if not mids:
+            return "—"
+        return ", ".join(f"`{mid}`" for mid in mids)
+    return "—"
+
+
 def _build_feature_section(feature, threats_catalog, mitigations_catalog):
     """Build a markdown section for a single feature."""
     fname = feature.get("name", "Unknown")
@@ -282,7 +300,7 @@ def _build_feature_section(feature, threats_catalog, mitigations_catalog):
 
     parts = [f"### {fname}", ""]
     if fgoal:
-        parts.append(f"*{fgoal}*")
+        parts.append(f"> {fgoal}")
         parts.append("")
 
     # Meta line
@@ -293,30 +311,34 @@ def _build_feature_section(feature, threats_catalog, mitigations_catalog):
     parts.append(" · ".join(meta_items))
     parts.append("")
 
-    # Data flows, actors
+    # Data flows, actors as compact inline
     fflows = feature.get("data_flows", [])
     factors = feature.get("threat_actors", [])
     if fflows:
-        parts.append(f"**Data Flows:** {', '.join(f'`{f}`' for f in fflows)}")
+        parts.append(f"**Data Flows:** {', '.join(f'`{f}`' for f in fflows)}  ")
     if factors:
         parts.append(f"**Threat Actors:** {', '.join(f'`{a}`' for a in factors)}")
     if fflows or factors:
         parts.append("")
 
-    # Threat → mitigation mappings
-    parts.append("#### Threat → Mitigation Mappings")
-    parts.append("")
-
-    if isinstance(feature_threats, list):
+    # Threat → mitigation table
+    if isinstance(feature_threats, list) and feature_threats:
+        parts.append("| | Threat | STRIDE | Mitigations |")
+        parts.append("|:---:|:---|:---:|:---|")
         for tid in feature_threats:
             tinfo = threats_catalog.get(tid, {})
             if not isinstance(tinfo, dict):
                 tinfo = {}
             severity = tinfo.get("severity", "medium")
+            stride = tinfo.get("stride", "?")
             emoji = _SEVERITY_EMOJI.get(severity, "⚪")
-            tname = tinfo.get("name", tid)
-            parts.append(f"- {emoji} **`{tid}`** {tname} — *mitigations not yet defined*")
-    elif isinstance(feature_threats, dict):
+            tname = _esc_md_table(tinfo.get("name", tid))
+            parts.append(f"| {emoji} | `{tid}` {tname} | **{stride}** | *not yet mapped* |")
+        parts.append("")
+
+    elif isinstance(feature_threats, dict) and feature_threats:
+        parts.append("| | Threat | STRIDE | Mitigations |")
+        parts.append("|:---:|:---|:---:|:---|")
         for tid, mids in feature_threats.items():
             tinfo = threats_catalog.get(tid, {})
             if not isinstance(tinfo, dict):
@@ -324,35 +346,15 @@ def _build_feature_section(feature, threats_catalog, mitigations_catalog):
             severity = tinfo.get("severity", "medium")
             stride = tinfo.get("stride", "?")
             emoji = _SEVERITY_EMOJI.get(severity, "⚪")
-            tname = tinfo.get("name", tid)
-            stride_name = STRIDE_NAMES.get(stride, stride)
+            tname = _esc_md_table(tinfo.get("name", tid))
+            mit_cell = _esc_md_table(_resolve_mitigations_cell(mids, tinfo, mitigations_catalog))
+            parts.append(f"| {emoji} | `{tid}` {tname} | **{stride}** | {mit_cell} |")
+        parts.append("")
 
-            parts.append(f"- {emoji} **`{tid}`** {tname} `[{stride}:{stride_name}]`")
-
-            if mids == "default":
-                resolved = tinfo.get("suggested_mitigations", [])
-                if not isinstance(resolved, list):
-                    resolved = []
-                if resolved:
-                    for mid in resolved:
-                        mit_raw = mitigations_catalog.get(mid, "Unknown mitigation")
-                        desc = _mitigation_desc(mit_raw)
-                        refs = _mitigation_refs(mit_raw)
-                        parts.append(f"  - `{mid}` — {desc}{refs} *(default)*")
-                else:
-                    parts.append("  - *No suggested mitigations in catalog*")
-            elif mids == "accepted" or (isinstance(mids, dict) and mids.get("status") == "accepted"):
-                parts.append("  - **Risk accepted**")
-            elif isinstance(mids, list):
-                for mid in mids:
-                    mit_raw = mitigations_catalog.get(mid, "Unknown mitigation")
-                    desc = _mitigation_desc(mit_raw)
-                    refs = _mitigation_refs(mit_raw)
-                    parts.append(f"  - `{mid}` — {desc}{refs}")
     else:
         parts.append("*No threat mappings defined for this feature.*")
+        parts.append("")
 
-    parts.append("")
     return "\n".join(parts)
 
 
