@@ -9,7 +9,7 @@ def generate_threat_model_prompt(tm, feature_name, feature_description, model_di
     """
     threats = tm.get("threats", {})
     mitigations = tm.get("mitigations", {})
-    threat_actors = tm.get("threat_actors", {})
+    threat_actors = tm.get("threat_actors", [])
     components = tm.get("components", [])
     data_flows = tm.get("data_flows", [])
 
@@ -17,7 +17,7 @@ def generate_threat_model_prompt(tm, feature_name, feature_description, model_di
     flow_ids = ", ".join(f.get("id", "?") for f in data_flows) or "None"
     threat_ids = ", ".join(threats.keys()) or "None"
     mitigation_ids = ", ".join(mitigations.keys()) or "None"
-    actor_ids = ", ".join(threat_actors.keys()) or "None"
+    actor_ids = ", ".join(ta.get("id", "?") for ta in threat_actors) or "None"
 
     return f"""# THREAT MODELING TASK - ACTION REQUIRED
 
@@ -37,23 +37,23 @@ def generate_threat_model_prompt(tm, feature_name, feature_description, model_di
   input_data: [<sensitive inputs>]
   output_data: [<sensitive outputs>]
   data_flows: [<data flow IDs>]
-  threat_actors: [<TA01, etc>]
+  threat_actors: [<threat_actor_id, ...>]
   threats:
-    T001: default        # Use catalog's suggested_mitigations
-    T002: [M001, M002]  # Explicit mitigation list (override)
-    T003: accepted       # Risk accepted without mitigation
+    threat_name: default            # Use catalog's suggested_mitigations
+    other_threat: [mit_a, mit_b]   # Explicit mitigation list (override)
+    known_risk: accepted            # Risk accepted without mitigation
   last_updated: {date.today().isoformat()}
 ```
 
 ### 2. Add new data flows to `{model_dir}/data_flows.yaml` (if needed)
 ### 3. Add new components to `{model_dir}/components.yaml` (if needed)
-### 4. Add new threats to `{model_dir}/threats/catalog.yaml` (if needed)
+### 4. Add new threats to `{model_dir}/threats/threats.yaml` (if needed)
 ### 5. Add new mitigations to `{model_dir}/threats/mitigations.yaml` (if needed)
 ```yaml
 # Simple format
-M010: "Rate limiting per client/IP"
+rate_limiting: "Rate limiting per client/IP"
 # Rich format with code references (optional)
-M011:
+webhook_signature_verify:
   description: "HMAC-SHA256 webhook signature verification"
   references:
     - file: "src/webhooks/verify.ts"

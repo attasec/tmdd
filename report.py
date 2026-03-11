@@ -961,7 +961,7 @@ def generate_html_report(threat_model, system_name):
     data_flows = threat_model.get("data_flows", [])
     threats = threat_model.get("threats", {})
     mitigations = threat_model.get("mitigations", {})
-    threat_actors = threat_model.get("threat_actors", {})
+    threat_actors = threat_model.get("threat_actors", [])
 
     # Active usage stats
     total_threats_used = set()
@@ -994,8 +994,8 @@ def generate_html_report(threat_model, system_name):
 
     system_actors_html = _build_actor_items(actors)
     actors_html = "\n".join(
-        f'<div class="actor-item"><code>{_esc(ta_id)}</code>: {_esc(ta_desc)}</div>'
-        for ta_id, ta_desc in threat_actors.items()
+        f'<div class="actor-item"><code>{_esc(ta.get("id", ""))}</code>: {_esc(ta.get("description", ""))}</div>'
+        for ta in threat_actors if isinstance(ta, dict)
     )
 
     diagram_section = _build_interactive_diagram(threat_model)
@@ -1074,39 +1074,51 @@ def generate_html_report(threat_model, system_name):
 """
 
 
-def generate_report(model_dir, output_dir=None, output_name="tm.html"):
-    """Generate threat model HTML report."""
+def generate_report(model_dir, output_dir=None, output_name=None, fmt="html"):
+    """Generate threat model report in the specified format (html or md)."""
+    from report_md import generate_markdown_report
+
     model_dir = resolve_model_dir(model_dir)
     threat_model = load_threat_model(model_dir)
     system_name = threat_model.get("system", {}).get("name", "Threat Model")
+
+    if output_name is None:
+        output_name = "tm.md" if fmt == "md" else "tm.html"
 
     out = Path(output_dir) if output_dir else get_output_dir()
     out.mkdir(parents=True, exist_ok=True)
     output_file = out / output_name
 
-    html_content = generate_html_report(threat_model, system_name)
-    output_file.write_text(html_content, encoding="utf-8")
+    if fmt == "md":
+        content = generate_markdown_report(threat_model, system_name)
+    else:
+        content = generate_html_report(threat_model, system_name)
+
+    output_file.write_text(content, encoding="utf-8")
     print(f"Generated: {output_file}")
     return 0
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate HTML threat model report",
+        description="Generate threat model report (HTML or Markdown)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  tmdd-report                          # Uses .tmdd/
+  tmdd-report                          # HTML report (default)
+  tmdd-report --format md              # Markdown report (GitHub-native)
   tmdd-report -p ./my-app
   tmdd-report -o ./reports -n security-report.html
         """,
     )
     parser.add_argument("-p", "--path", default=".tmdd", help="Threat model directory (default: .tmdd)")
     parser.add_argument("-o", "--output", help="Output directory (default: .tmdd/out/)")
-    parser.add_argument("-n", "--name", default="tm.html", help="Output HTML filename (default: tm.html)")
+    parser.add_argument("-n", "--name", help="Output filename (default: tm.html or tm.md)")
+    parser.add_argument("-f", "--format", choices=["html", "md"], default="html",
+                        help="Output format: html (interactive) or md (GitHub-native) (default: html)")
     args = parser.parse_args()
     try:
-        return generate_report(args.path, args.output, args.name)
+        return generate_report(args.path, args.output, args.name, args.format)
     except TMDDError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1

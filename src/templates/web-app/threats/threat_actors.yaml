@@ -1,7 +1,10 @@
 # Threat Actors - Potential adversaries
 threat_actors:
-  TA001: External attacker (opportunistic, low skill)
-  TA002: External attacker (targeted, high skill)
-  TA003: Malicious insider (authenticated user)
-  TA004: Compromised third-party service
-
+  - id: external_opportunistic
+    description: External attacker (opportunistic, low skill)
+  - id: external_targeted
+    description: External attacker (targeted, high skill)
+  - id: malicious_insider
+    description: Malicious insider (authenticated user)
+  - id: compromised_third_party
+    description: Compromised third-party service

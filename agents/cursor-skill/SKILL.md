@@ -112,8 +112,8 @@ After init, replace the template content with architecture-specific data from Ph
 1. Read the file first to see what entries already exist
 2. Append new entries — do not remove or rewrite existing ones unless
    the user explicitly asks for changes to specific entries
-3. When adding threats/mitigations, continue the existing ID sequence
-   (e.g., if T005 exists, start new threats at T006)
+3. When adding threats/mitigations, use unique descriptive IDs
+   (e.g., if `sql_injection` exists, don't create a duplicate)
 
 Edit these files using the analysis from Phase 1:
 
@@ -165,17 +165,17 @@ data_flows:
 - `data_description` must name the actual data types (not just "API calls")
 - Include protocol and auth method from the code
 
-#### 4. `threats/catalog.yaml` — Threats specific to THIS codebase
+#### 4. `threats/threats.yaml` — Threats specific to THIS codebase
 
 ```yaml
 threats:
-  T001:                              # ^T\d+$
+  sql_injection:                       # ^[a-z][a-z0-9_]*$
     name: "SQL Injection via raw query in search endpoint"
     description: "The /api/search endpoint in src/routes/search.ts uses string concatenation for the WHERE clause instead of parameterized queries"
-    severity: high                   # low|medium|high|critical
-    stride: T                        # S|T|R|I|D|E
+    severity: high                     # low|medium|high|critical
+    stride: T                          # S|T|R|I|D|E
     cwe: CWE-89
-    suggested_mitigations: [M001]    # each must exist in mitigations.yaml
+    suggested_mitigations: [parameterized_queries]  # each must exist in mitigations.yaml
 ```
 
 **CRITICAL — Threat Quality Rules:**
@@ -197,10 +197,10 @@ threats:
 ```yaml
 mitigations:
   # Simple format
-  M001: "Use parameterized queries via Prisma ORM for all database access"
+  parameterized_queries: "Use parameterized queries via Prisma ORM for all database access"
 
   # Rich format with code references (preferred — ties mitigation to implementation)
-  M002:
+  zod_validation:
     description: "Zod schema validation on all API request bodies"
     references:
       - file: "src/middleware/validate.ts"
@@ -217,7 +217,8 @@ mitigations:
 
 ```yaml
 threat_actors:
-  TA001: "External unauthenticated attacker"    # ^TA\d+$
+  - id: external_attacker          # ^[a-z][a-z0-9_]*$
+    description: "External unauthenticated attacker"
 ```
 
 #### 7. `features.yaml` — Features with threat-to-mitigation mapping
@@ -227,19 +228,19 @@ features:
   - name: "User Login"            # REQUIRED
     goal: "Authenticate users"    # REQUIRED
     data_flows: [df_user_to_api]  # must exist in data_flows.yaml
-    threat_actors: [TA001]        # must exist in threat_actors.yaml
+    threat_actors: [external_attacker]  # must exist in threat_actors.yaml
     threats:                      # MUST be a dict, NOT a list
-      T001: default               # inherit suggested_mitigations from catalog
-      T002: [M003, M005]          # explicit mitigation override
-      T003: accepted              # risk deliberately accepted
+      sql_injection: default      # inherit suggested_mitigations from threats.yaml
+      csrf_attack: [csrf_tokens, samesite_cookies]  # explicit mitigation override
+      missing_rate_limit: accepted  # risk deliberately accepted
     last_updated: "2026-02-22"    # set by agent to today's date
     reviewed_at: "2000-01-01"     # SENTINEL — forces stale-review lint warning
     # reviewed_by: — DO NOT SET. Only a human adds this after manual review.
 ```
 
 **Threat mapping values:**
-- `default` — inherit `suggested_mitigations` from `threats/catalog.yaml` (preferred when suggestions fit)
-- `[M001, M002]` — explicit mitigation list (override when you need different controls)
+- `default` — inherit `suggested_mitigations` from `threats/threats.yaml` (preferred when suggestions fit)
+- `[parameterized_queries, input_validation]` — explicit mitigation list (override when you need different controls)
 - `accepted` — risk deliberately accepted without mitigation
 
 **Review fields (human-only attestation):**
@@ -255,12 +256,12 @@ features:
 ```yaml
 # CORRECT
 threats:
-  T001: default
-  T002: [M001, M002]
-  T003: accepted
+  sql_injection: default
+  csrf_attack: [csrf_tokens, samesite_cookies]
+  missing_rate_limit: accepted
 
 # WRONG - will fail lint
-threats: [T001, T002, T003]
+threats: [sql_injection, csrf_attack, missing_rate_limit]
 ```
 
 ---
@@ -300,7 +301,7 @@ tmdd feature "Feature Name"
 1. `components.yaml` — Add new components if the feature introduces new architectural units
 2. `actors.yaml` — Add new actors if the feature serves new user types
 3. `data_flows.yaml` — Add flows for new data paths the feature creates
-4. `threats/catalog.yaml` — Add threats specific to the feature's code (not generic threats)
+4. `threats/threats.yaml` — Add threats specific to the feature's code (not generic threats)
 5. `threats/mitigations.yaml` — Add mitigations referencing actual or planned implementation files
 6. `features.yaml` — Add the feature with full threat->mitigation mapping
 
@@ -321,13 +322,15 @@ tmdd compile .tmdd --feature "Login"      # Single feature
 
 ## ID Conventions
 
-| Type       | Pattern              | Example          |
-|------------|----------------------|------------------|
-| Entity     | `^[a-z][a-z0-9_]*$` | `api_backend`    |
-| Threat     | `^T\d+$`            | `T001`           |
-| Mitigation | `^M\d+$`            | `M001`           |
-| Threat Actor | `^TA\d+$`         | `TA001`          |
-| Data Flow  | `df_{src}_to_{dst}` | `df_user_to_api` |
+All IDs use the same pattern: `^[a-z][a-z0-9_]*$` — lowercase descriptive names.
+
+| Type         | Pattern              | Example                |
+|--------------|----------------------|------------------------|
+| Entity       | `^[a-z][a-z0-9_]*$` | `api_backend`          |
+| Threat       | `^[a-z][a-z0-9_]*$` | `sql_injection`        |
+| Mitigation   | `^[a-z][a-z0-9_]*$` | `parameterized_queries`|
+| Threat Actor | `^[a-z][a-z0-9_]*$` | `external_attacker`    |
+| Data Flow    | `df_{src}_to_{dst}` | `df_user_to_api`        |
 
 ## YAML Schema Reference
 
@@ -373,28 +376,28 @@ data_flows:
     authentication: JWT            # optional
 ```
 
-### threats/catalog.yaml
+### threats/threats.yaml
 
 ```yaml
 threats:
-  T001:                              # key must match ^T\d+$
-    name: "SQL Injection"            # REQUIRED string
-    description: "Unsanitized input" # REQUIRED string
-    severity: high                   # low|medium|high|critical
-    stride: T                        # S|T|R|I|D|E
-    cwe: CWE-89                      # optional
-    suggested_mitigations: [M001]    # each must exist in mitigations.yaml
+  sql_injection:                       # key must match ^[a-z][a-z0-9_]*$
+    name: "SQL Injection"              # REQUIRED string
+    description: "Unsanitized input"   # REQUIRED string
+    severity: high                     # low|medium|high|critical
+    stride: T                          # S|T|R|I|D|E
+    cwe: CWE-89                        # optional
+    suggested_mitigations: [parameterized_queries]  # each must exist in mitigations.yaml
 ```
 
 ### threats/mitigations.yaml
 
 ```yaml
 mitigations:
-  # Simple format - key: ^M\d+$, value: non-empty string
-  M001: "Parameterized queries"
+  # Simple format - key: ^[a-z][a-z0-9_]*$, value: non-empty string
+  parameterized_queries: "Parameterized queries"
 
   # Rich format with optional code references
-  M002:
+  zod_validation:
     description: "Input validation with Zod schemas"
     references:                          # optional
       - file: "src/api/validation.ts"    # required: source file path
@@ -405,7 +408,8 @@ mitigations:
 
 ```yaml
 threat_actors:
-  TA001: "External attacker"    # key: ^TA\d+$, value: non-empty string
+  - id: external_attacker          # ^[a-z][a-z0-9_]*$
+    description: "External attacker"
 ```
 
 ### features.yaml
@@ -415,11 +419,11 @@ features:
   - name: "User Login"            # REQUIRED string
     goal: "Authenticate users"     # REQUIRED string
     data_flows: [df_user_to_api]   # each must exist in data_flows.yaml
-    threat_actors: [TA001]         # each must exist in threat_actors.yaml
+    threat_actors: [external_attacker]  # each must exist in threat_actors.yaml
     threats:                       # MUST be a dict, NOT a list
-      T001: default               # use catalog's suggested_mitigations
-      T002: [M003, M005]          # explicit mitigation override
-      T003: accepted              # risk accepted without mitigation
+      sql_injection: default       # use threats.yaml's suggested_mitigations
+      csrf_attack: [csrf_tokens, samesite_cookies]  # explicit mitigation override
+      missing_rate_limit: accepted # risk accepted without mitigation
     last_updated: "2026-02-22"   # agent sets to today's date
     reviewed_at: "2000-01-01"    # sentinel — human updates after review
     # reviewed_by: — only set by human reviewer, never by AI agent
@@ -430,9 +434,9 @@ features:
 1. `data_flows[].source/destination` must exist in actors or components
 2. `features[].data_flows[]` must exist in data_flows.yaml
 3. `features[].threat_actors[]` must exist in threat_actors.yaml
-4. `features[].threats` keys must exist in threats/catalog.yaml
+4. `features[].threats` keys must exist in threats/threats.yaml
 5. `features[].threats` mitigation values must exist in threats/mitigations.yaml
-6. `catalog[].suggested_mitigations[]` must exist in mitigations.yaml
+6. `threats[].suggested_mitigations[]` must exist in mitigations.yaml
 
 ## Self-Validation Checklist
 

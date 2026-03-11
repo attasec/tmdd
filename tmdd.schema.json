@@ -13,21 +13,18 @@
     },
 
     "threat_id": {
-      "type": "string",
-      "description": "Threat catalog ID: T followed by digits (e.g., T001, T042)",
-      "pattern": "^T\\d+$"
+      "$ref": "#/definitions/entity_id",
+      "description": "Threat ID: descriptive symbolic name (e.g., sql_injection_search, xss_stored_report)"
     },
 
     "mitigation_id": {
-      "type": "string",
-      "description": "Mitigation catalog ID: M followed by digits (e.g., M001, M012)",
-      "pattern": "^M\\d+$"
+      "$ref": "#/definitions/entity_id",
+      "description": "Mitigation ID: descriptive symbolic name (e.g., parameterized_queries, input_validation)"
     },
 
     "threat_actor_id": {
-      "type": "string",
-      "description": "Threat actor ID: TA followed by digits (e.g., TA001)",
-      "pattern": "^TA\\d+$"
+      "$ref": "#/definitions/entity_id",
+      "description": "Threat actor ID: descriptive symbolic name (e.g., external_attacker, malicious_insider)"
     },
 
     "severity": {
@@ -251,7 +248,7 @@
               },
               "threats": {
                 "type": "object",
-                "description": "Threat-to-mitigation mapping. Keys are threat IDs (T001, T002...), values are 'default', 'accepted', or a list of mitigation IDs [M001, M002]",
+                "description": "Threat-to-mitigation mapping. Keys are threat IDs, values are 'default', 'accepted', or a list of mitigation IDs",
                 "additionalProperties": {
                   "$ref": "#/definitions/feature_threat_value"
                 }
@@ -332,7 +329,7 @@
 
     "threat_catalog": {
       "type": "object",
-      "description": "Threat catalog (threats/catalog.yaml)",
+      "description": "Threat definitions (threats/threats.yaml)",
       "properties": {
         "threats": {
           "type": "object",
@@ -393,12 +390,21 @@
       "description": "Threat actor profiles (threats/threat_actors.yaml)",
       "properties": {
         "threat_actors": {
-          "type": "object",
-          "description": "Map of threat_actor_id -> description string",
-          "additionalProperties": {
-            "type": "string",
-            "description": "Description of the threat actor",
-            "minLength": 1
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/definitions/entity_id",
+                "description": "Unique ID for the threat actor"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the threat actor"
+              }
+            },
+            "required": ["id", "description"],
+            "additionalProperties": true
           }
         }
       },

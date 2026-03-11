@@ -4,9 +4,6 @@ import re
 from ..utils import load_yaml, resolve_model_dir
 
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
-THREAT_PATTERN = re.compile(r"^T\d+$")
-MITIGATION_PATTERN = re.compile(r"^M\d+$")
-ACTOR_PATTERN = re.compile(r"^TA\d+$")
 SEVERITY_VALUES = {"low", "medium", "high", "critical"}
 STRIDE_VALUES = {"S", "T", "R", "I", "D", "E"}
 
@@ -31,7 +28,7 @@ def cmd_lint(args):
 
     # --- check required files exist ---
     main_files = ["system.yaml", "actors.yaml", "components.yaml", "features.yaml", "data_flows.yaml"]
-    threat_files = ["catalog.yaml", "mitigations.yaml", "threat_actors.yaml"]
+    threat_files = ["threats.yaml", "mitigations.yaml", "threat_actors.yaml"]
 
     missing = [f for f in main_files if not (model_dir / f).exists()]
     if not threats_dir.is_dir():
@@ -55,97 +52,7 @@ def cmd_lint(args):
 
     print(f"Linting: {model_dir.absolute()}\n")
 
-    # --- catalog-style validation (threats/mitigations/threat_actors) ---
-    def validate_catalog(filename, key, pattern):
-        catalog = data[filename].get(key, {})
-        if not isinstance(catalog, dict):
-            add_error(filename, f"'{key}' must be mapping")
-            return set()
-        valid_ids = set()
-        for item_id, desc in catalog.items():
-            if not pattern.match(str(item_id)):
-                add_error(filename, f"invalid ID '{item_id}'")
-            elif not desc or not isinstance(desc, str):
-                add_error(filename, f"'{item_id}' needs description")
-            else:
-                valid_ids.add(item_id)
-        return valid_ids
-
-    def validate_mitigation_catalog(filename):
-        """Validate mitigations catalog - supports string or rich object format."""
-        catalog = data[filename].get("mitigations", {})
-        if not isinstance(catalog, dict):
-            add_error(filename, "'mitigations' must be mapping")
-            return set()
-        valid_ids = set()
-        for item_id, entry in catalog.items():
-            loc = f"{filename}:{item_id}"
-            if not MITIGATION_PATTERN.match(str(item_id)):
-                add_error(loc, "invalid ID")
-                continue
-            # Simple format: M001: "description string"
-            if isinstance(entry, str):
-                if not entry:
-                    add_error(loc, "needs description")
-                else:
-                    valid_ids.add(item_id)
-            # Rich format: M001: { description: "...", references: [...] }
-            elif isinstance(entry, dict):
-                desc = entry.get("description")
-                if not desc or not isinstance(desc, str):
-                    add_error(loc, "needs 'description' string")
-                    continue
-                refs = entry.get("references")
-                if refs is not None:
-                    if not isinstance(refs, list):
-                        add_error(loc, "'references' must be a list")
-                        continue
-                    for i, ref in enumerate(refs):
-                        if not isinstance(ref, dict):
-                            add_error(loc, f"references[{i}] must be an object")
-                        elif not ref.get("file") or not isinstance(ref.get("file"), str):
-                            add_error(loc, f"references[{i}] missing 'file'")
-                valid_ids.add(item_id)
-            else:
-                add_error(loc, "must be a string or object with 'description'")
-        return valid_ids
-
-    mitigations = validate_mitigation_catalog("threats/mitigations.yaml")
-    threat_actors = validate_catalog("threats/threat_actors.yaml", "threat_actors", ACTOR_PATTERN)
-
-    # --- threats catalog (richer structure) ---
-    threats = set()
-    catalog = data["threats/catalog.yaml"].get("threats", {})
-    if not isinstance(catalog, dict):
-        add_error("threats/catalog.yaml", "'threats' must be mapping")
-    else:
-        for threat_id, threat in catalog.items():
-            loc = f"threats/catalog.yaml:{threat_id}"
-            if not THREAT_PATTERN.match(str(threat_id)):
-                add_error(loc, "invalid ID")
-                continue
-            if not isinstance(threat, dict):
-                add_error(loc, "must be object")
-                continue
-            threats.add(threat_id)
-            for field in ["name", "description"]:
-                if not threat.get(field):
-                    add_error(loc, f"missing '{field}'")
-            if threat.get("severity") and threat["severity"] not in SEVERITY_VALUES:
-                add_error(loc, "invalid severity")
-            if threat.get("stride") and threat["stride"] not in STRIDE_VALUES:
-                add_error(loc, "invalid stride")
-            for mit_id in threat.get("suggested_mitigations", []):
-                if mit_id not in mitigations:
-                    add_error(loc, f"unknown mitigation '{mit_id}'")
-
-    # --- system.yaml ---
-    system_data = data["system.yaml"].get("system", {})
-    for field in ["name", "description", "version"]:
-        if not system_data.get(field):
-            add_error("system.yaml", f"missing '{field}'")
-
-    # --- list-style validation (actors/components/data_flows) ---
+    # --- list-style validation (actors/components/data_flows/threat_actors) ---
     def validate_items(filename, key, required_fields):
         items = data[filename].get(key, [])
         if not isinstance(items, list):
@@ -169,9 +76,82 @@ def cmd_lint(args):
                     add_error(loc, f"missing '{field}'")
         return valid_ids
 
+    # --- mapping-style validation (threats/mitigations) ---
+    def validate_mitigation_catalog(filename):
+        """Validate mitigations catalog - supports string or rich object format."""
+        catalog = data[filename].get("mitigations", {})
+        if not isinstance(catalog, dict):
+            add_error(filename, "'mitigations' must be mapping")
+            return set()
+        valid_ids = set()
+        for item_id, entry in catalog.items():
+            loc = f"{filename}:{item_id}"
+            if not ID_PATTERN.match(str(item_id)):
+                add_error(loc, "invalid ID")
+                continue
+            if isinstance(entry, str):
+                if not entry:
+                    add_error(loc, "needs description")
+                else:
+                    valid_ids.add(item_id)
+            elif isinstance(entry, dict):
+                desc = entry.get("description")
+                if not desc or not isinstance(desc, str):
+                    add_error(loc, "needs 'description' string")
+                    continue
+                refs = entry.get("references")
+                if refs is not None:
+                    if not isinstance(refs, list):
+                        add_error(loc, "'references' must be a list")
+                        continue
+                    for i, ref in enumerate(refs):
+                        if not isinstance(ref, dict):
+                            add_error(loc, f"references[{i}] must be an object")
+                        elif not ref.get("file") or not isinstance(ref.get("file"), str):
+                            add_error(loc, f"references[{i}] missing 'file'")
+                valid_ids.add(item_id)
+            else:
+                add_error(loc, "must be a string or object with 'description'")
+        return valid_ids
+
+    mitigations = validate_mitigation_catalog("threats/mitigations.yaml")
+
+    # --- threats (richer structure) ---
+    threats = set()
+    catalog = data["threats/threats.yaml"].get("threats", {})
+    if not isinstance(catalog, dict):
+        add_error("threats/threats.yaml", "'threats' must be mapping")
+    else:
+        for threat_id, threat in catalog.items():
+            loc = f"threats/threats.yaml:{threat_id}"
+            if not ID_PATTERN.match(str(threat_id)):
+                add_error(loc, "invalid ID")
+                continue
+            if not isinstance(threat, dict):
+                add_error(loc, "must be object")
+                continue
+            threats.add(threat_id)
+            for field in ["name", "description"]:
+                if not threat.get(field):
+                    add_error(loc, f"missing '{field}'")
+            if threat.get("severity") and threat["severity"] not in SEVERITY_VALUES:
+                add_error(loc, "invalid severity")
+            if threat.get("stride") and threat["stride"] not in STRIDE_VALUES:
+                add_error(loc, "invalid stride")
+            for mit_id in threat.get("suggested_mitigations", []):
+                if mit_id not in mitigations:
+                    add_error(loc, f"unknown mitigation '{mit_id}'")
+
+    # --- system.yaml ---
+    system_data = data["system.yaml"].get("system", {})
+    for field in ["name", "description", "version"]:
+        if not system_data.get(field):
+            add_error("system.yaml", f"missing '{field}'")
+
     actors = validate_items("actors.yaml", "actors", ["id", "description"])
     components = validate_items("components.yaml", "components", ["id", "description"])
     flows = validate_items("data_flows.yaml", "data_flows", ["id", "source", "destination"])
+    threat_actors = validate_items("threats/threat_actors.yaml", "threat_actors", ["id", "description"])
     endpoints = actors | components
 
     # --- cross-reference: data flow endpoints ---

@@ -162,7 +162,7 @@ Without these instructions, AI models commonly produce unusable threat models:
 | Generic threats ("SQL injection is possible") | Specific threats ("SQL injection via raw query in `src/routes/search.ts`") |
 | No architecture analysis | Scans codebase first, maps real components |
 | Flat threat lists | Dict mapping with threat-to-mitigation links |
-| Invented IDs like `Payment-API` | Valid IDs: `payment_api`, `T001`, `M001` |
+| Invented IDs like `Payment-API` | Valid IDs: `payment_api`, `sql_injection`, `parameterized_queries` |
 | Dangling references | All cross-references validated by `tmdd lint` |
 | YAML dumped in chat | Files edited directly in the project |
 | Mitigations without code refs | Rich format with file paths and line numbers |
@@ -394,18 +394,20 @@ Output: `.tmdd/out/tm.html` (self-contained HTML)
 
 | File | Purpose |
 |------|---------|
-| `threats/catalog.yaml` | Threat definitions (T001, T002...) |
-| `threats/mitigations.yaml` | Security controls (M001, M002...) |
-| `threats/threat_actors.yaml` | Adversary profiles (TA001...) |
+| `threats/threats.yaml` | Threat definitions (sql_injection, csrf_attack...) |
+| `threats/mitigations.yaml` | Security controls (parameterized_queries, input_validation...) |
+| `threats/threat_actors.yaml` | Adversary profiles (external_attacker, insider_threat...) |
 
 ### ID Conventions
+
+All IDs use the same pattern: `^[a-z][a-z0-9_]*$` — lowercase descriptive names.
 
 | Type | Pattern | Example |
 |------|---------|---------|
 | Entity | `^[a-z][a-z0-9_]*$` | `payment_api` |
-| Threat | `^T\d+$` | `T001` |
-| Mitigation | `^M\d+$` | `M001` |
-| Threat Actor | `^TA\d+$` | `TA001` |
+| Threat | `^[a-z][a-z0-9_]*$` | `sql_injection` |
+| Mitigation | `^[a-z][a-z0-9_]*$` | `parameterized_queries` |
+| Threat Actor | `^[a-z][a-z0-9_]*$` | `external_attacker` |
 | Data Flow | `df_{source}_to_{dest}` | `df_user_to_api` |
 
 ---

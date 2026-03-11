@@ -3,6 +3,11 @@
 # =============================================================================
 
 threat_actors:
-  TA001: "External attacker who compromises a CDN or npm package used by TMDD-generated HTML reports"
-  TA002: "Malicious insider with filesystem access who tampers with .tmdd/ YAML files to inject harmful content into reports or AI prompts"
-  TA003: "Automated CI/CD pipeline that invokes TMDD commands with untrusted or user-controlled input parameters"
+  - id: cdn_package_attacker
+    description: "External attacker who compromises a CDN or npm package used by TMDD-generated HTML reports"
+
+  - id: malicious_insider_fs
+    description: "Malicious insider with filesystem access who tampers with .tmdd/ YAML files to inject harmful content into reports or AI prompts"
+
+  - id: ci_pipeline_untrusted
+    description: "Automated CI/CD pipeline that invokes TMDD commands with untrusted or user-controlled input parameters"

@@ -113,7 +113,7 @@ class TestCmdLintValidationErrors:
     def test_invalid_threat_id(self, tmp_path, capsys):
         model_dir = tmp_path / "model"
         _write_model(model_dir, overrides={
-            "threats/catalog.yaml": "threats:\n  BAD_ID:\n    name: Bad\n    description: Bad threat\n",
+            "threats/threats.yaml": "threats:\n  123BAD:\n    name: Bad\n    description: Bad threat\n",
         })
         args = make_args(path=str(model_dir))
         result = cmd_lint(args)
@@ -124,7 +124,7 @@ class TestCmdLintValidationErrors:
     def test_invalid_mitigation_id(self, tmp_path, capsys):
         model_dir = tmp_path / "model"
         _write_model(model_dir, overrides={
-            "threats/mitigations.yaml": "mitigations:\n  BAD: Some mitigation\n",
+            "threats/mitigations.yaml": "mitigations:\n  123BAD: Some mitigation\n",
         })
         args = make_args(path=str(model_dir))
         result = cmd_lint(args)
@@ -135,9 +135,9 @@ class TestCmdLintValidationErrors:
     def test_invalid_severity(self, tmp_path, capsys):
         model_dir = tmp_path / "model"
         _write_model(model_dir, overrides={
-            "threats/catalog.yaml": (
+            "threats/threats.yaml": (
                 "threats:\n"
-                "  T001:\n"
+                "  some_threat:\n"
                 "    name: Threat\n"
                 "    description: Desc\n"
                 "    severity: extreme\n"
@@ -152,9 +152,9 @@ class TestCmdLintValidationErrors:
     def test_invalid_stride(self, tmp_path, capsys):
         model_dir = tmp_path / "model"
         _write_model(model_dir, overrides={
-            "threats/catalog.yaml": (
+            "threats/threats.yaml": (
                 "threats:\n"
-                "  T001:\n"
+                "  some_threat:\n"
                 "    name: Threat\n"
                 "    description: Desc\n"
                 "    stride: X\n"
@@ -190,7 +190,7 @@ class TestCmdLintValidationErrors:
                 "  - name: Bad Feature\n"
                 "    goal: Test\n"
                 "    threats:\n"
-                "      T999: [M001]\n"
+                "      nonexistent_threat: [parameterized_queries]\n"
             ),
         })
         args = make_args(path=str(model_dir))
@@ -207,7 +207,7 @@ class TestCmdLintValidationErrors:
                 "  - name: Bad Feature\n"
                 "    goal: Test\n"
                 "    threats:\n"
-                "      T001: [M999]\n"
+                "      sql_injection: [nonexistent_mitigation]\n"
             ),
         })
         args = make_args(path=str(model_dir))
@@ -225,7 +225,7 @@ class TestCmdLintValidationErrors:
                 "    goal: Test\n"
                 "    data_flows: [df_user_to_web]\n"
                 "    threats:\n"
-                "      T001: accepted\n"
+                "      sql_injection: accepted\n"
             ),
         })
         args = make_args(path=str(model_dir))
@@ -255,7 +255,7 @@ class TestCmdLintValidationErrors:
                 "features:\n"
                 "  - name: Feature\n"
                 "    goal: Test\n"
-                "    threat_actors: [TA99]\n"
+                "    threat_actors: [nonexistent_actor]\n"
             ),
         })
         args = make_args(path=str(model_dir))
@@ -310,9 +310,9 @@ class TestCmdLintRichMitigations:
         _write_model(model_dir, overrides={
             "threats/mitigations.yaml": (
                 "mitigations:\n"
-                "  M001:\n"
+                "  parameterized_queries:\n"
                 "    description: Some control\n"
-                "  M002: Simple string\n"
+                "  account_lockout: Simple string\n"
             ),
         })
         args = make_args(path=str(model_dir))
@@ -324,7 +324,7 @@ class TestCmdLintRichMitigations:
         _write_model(model_dir, overrides={
             "threats/mitigations.yaml": (
                 "mitigations:\n"
-                "  M001:\n"
+                "  some_control:\n"
                 "    references:\n"
                 "      - file: foo.ts\n"
             ),
@@ -340,7 +340,7 @@ class TestCmdLintRichMitigations:
         _write_model(model_dir, overrides={
             "threats/mitigations.yaml": (
                 "mitigations:\n"
-                "  M001:\n"
+                "  some_control:\n"
                 "    description: Control\n"
                 "    references: not_a_list\n"
             ),
@@ -356,7 +356,7 @@ class TestCmdLintRichMitigations:
         _write_model(model_dir, overrides={
             "threats/mitigations.yaml": (
                 "mitigations:\n"
-                "  M001:\n"
+                "  some_control:\n"
                 "    description: Control\n"
                 "    references:\n"
                 "      - lines: '42'\n"
@@ -373,7 +373,7 @@ class TestCmdLintRichMitigations:
         _write_model(model_dir, overrides={
             "threats/mitigations.yaml": (
                 "mitigations:\n"
-                "  M001:\n"
+                "  some_control:\n"
                 "    description: Control\n"
                 "    references:\n"
                 "      - just_a_string\n"
@@ -390,8 +390,8 @@ class TestCmdLintRichMitigations:
         _write_model(model_dir, overrides={
             "threats/mitigations.yaml": (
                 "mitigations:\n"
-                "  M001: Simple string control\n"
-                "  M002:\n"
+                "  parameterized_queries: Simple string control\n"
+                "  account_lockout:\n"
                 "    description: Rich control\n"
                 "    references:\n"
                 "      - file: src/auth.ts\n"

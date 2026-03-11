@@ -15,7 +15,7 @@ setup(
     author="mik0w",
     license="Apache-2.0",
     packages=find_packages(),
-    py_modules=["diagram", "report"],
+    py_modules=["diagram", "report", "report_md"],
     include_package_data=True,
     package_data={"src": ["templates/**/*.yaml", "tmdd.schema.json"]},
     install_requires=["PyYAML>=6.0"],

@@ -1,6 +1,8 @@
 # Threat Actors
 threat_actors:
-  TA001: Malicious API consumer
-  TA002: Man-in-the-middle attacker
-  TA003: Compromised client application
-
+  - id: malicious_api_consumer
+    description: Malicious API consumer
+  - id: mitm_attacker
+    description: Man-in-the-middle attacker
+  - id: compromised_client
+    description: Compromised client application

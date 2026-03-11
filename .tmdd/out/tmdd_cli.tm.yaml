@@ -1,0 +1,527 @@
+$schema: https://tmdd.dev/schema/v0.5
+actors:
+- description: Developer or security engineer who runs TMDD CLI commands (init, lint,
+    feature, compile) and edits .tmdd/ YAML files
+  id: developer
+- description: AI coding agent that consumes generated prompt files (.tmdd/out/*.prompt.txt,
+    *.threatmodel.txt) to produce threat models or secure code
+  id: ai_agent
+- description: Person viewing generated HTML reports and diagrams in a web browser,
+    potentially including non-developers or stakeholders
+  id: report_viewer
+components:
+- description: Argparse-based CLI entry point that parses user commands and dispatches
+    to command handlers (src/cli.py, src/__main__.py)
+  id: cli_core
+  source_paths:
+  - src/cli.py
+  - src/__main__.py
+  technology: Python / argparse
+  trust_boundary: internal
+  type: service
+- description: Command handlers for init, lint, feature, and compile operations (src/commands/)
+  id: command_engine
+  source_paths:
+  - src/commands/**
+  technology: Python
+  trust_boundary: internal
+  type: service
+- description: YAML loading via yaml.safe_load(), threat model assembly, and cross-reference
+    validation (src/utils.py, src/commands/lint.py)
+  id: yaml_processor
+  source_paths:
+  - src/utils.py
+  technology: Python / PyYAML (safe_load)
+  trust_boundary: internal
+  type: service
+- description: Generates AI prompt text files for threat modeling and secure coding
+    workflows (src/generators/threat_prompt.py, agent_prompt.py)
+  id: prompt_generator
+  source_paths:
+  - src/generators/**
+  technology: Python
+  trust_boundary: internal
+  type: service
+- description: Bundled YAML template files (minimal, web-app, api) used by init command
+    for project scaffolding (src/templates/)
+  id: template_store
+  source_paths:
+  - src/templates/**
+  technology: YAML files
+  trust_boundary: internal
+  type: other
+- description: Generates interactive HTML reports and architecture diagrams with embedded
+    Cytoscape.js (report.py, diagram.py)
+  id: html_renderer
+  source_paths:
+  - report.py
+  - diagram.py
+  technology: Python / HTML / JavaScript
+  trust_boundary: internal
+  type: service
+- description: Local filesystem storage for .tmdd/ YAML files, generated prompts,
+    reports, and diagrams (.tmdd/, .tmdd/out/)
+  id: filesystem_store
+  technology: Local filesystem
+  trust_boundary: internal
+  type: other
+- description: External CDN (unpkg.com) serving Cytoscape.js 3.30.4, dagre 0.8.5,
+    and cytoscape-dagre 2.5.0 loaded client-side in generated HTML
+  id: cdn_libraries
+  technology: unpkg.com CDN / JavaScript
+  trust_boundary: external
+  type: external
+data_flows:
+- authentication: none
+  data_description: CLI commands with arguments (path, feature name, description,
+    template name)
+  destination: cli_core
+  id: df_developer_to_cli
+  protocol: stdin
+  source: developer
+- authentication: none
+  data_description: Parsed argparse Namespace object with user-provided values
+  destination: command_engine
+  id: df_cli_to_commands
+  protocol: function_call
+  source: cli_core
+- authentication: none
+  data_description: File paths to load; returns parsed YAML dicts (system, actors,
+    components, threats, mitigations)
+  destination: yaml_processor
+  id: df_commands_to_yaml
+  protocol: function_call
+  source: command_engine
+- authentication: none
+  data_description: Read .tmdd/ YAML files (system.yaml, actors.yaml, components.yaml,
+    features.yaml, data_flows.yaml, threats/*.yaml)
+  destination: filesystem_store
+  id: df_yaml_to_filesystem
+  protocol: filesystem
+  source: yaml_processor
+- authentication: none
+  data_description: Template YAML files with {{name}} and {{description}} placeholders
+    substituted with user input, written to target directory
+  destination: filesystem_store
+  id: df_init_templates
+  protocol: filesystem
+  source: template_store
+- authentication: none
+  data_description: Loaded threat model dict and feature metadata for prompt generation
+  destination: prompt_generator
+  id: df_commands_to_prompts
+  protocol: function_call
+  source: command_engine
+- authentication: none
+  data_description: Generated text prompt files (*.threatmodel.txt, *.prompt.txt)
+    written to .tmdd/out/
+  destination: filesystem_store
+  id: df_prompts_to_filesystem
+  protocol: filesystem
+  source: prompt_generator
+- authentication: none
+  data_description: Loaded threat model dict passed to report/diagram generators
+  destination: html_renderer
+  id: df_commands_to_html
+  protocol: function_call
+  source: command_engine
+- authentication: none
+  data_description: Generated HTML files (tm.html, diagram.html) with embedded JSON
+    data and JavaScript, written to .tmdd/out/
+  destination: filesystem_store
+  id: df_html_to_filesystem
+  protocol: filesystem
+  source: html_renderer
+- authentication: none
+  data_description: JavaScript libraries (cytoscape.min.js, dagre.min.js, cytoscape-dagre.js)
+    loaded via script tags from unpkg.com
+  destination: report_viewer
+  id: df_cdn_to_browser
+  protocol: HTTPS
+  source: cdn_libraries
+- authentication: none
+  data_description: HTML report/diagram files served to browser with embedded threat
+    model data in JSON format
+  destination: report_viewer
+  id: df_filesystem_to_viewer
+  protocol: filesystem
+  source: filesystem_store
+- authentication: none
+  data_description: Generated prompt text files consumed by AI agent for threat modeling
+    or secure code generation
+  destination: ai_agent
+  id: df_filesystem_to_agent
+  protocol: filesystem
+  source: filesystem_store
+features:
+- data_flows:
+  - df_developer_to_cli
+  - df_cli_to_commands
+  - df_init_templates
+  goal: Create a new TMDD threat model project from a template (minimal, web-app,
+    or api)
+  input_data:
+  - path
+  - system name
+  - description
+  - template name
+  last_updated: '2026-02-22'
+  name: Project Initialization
+  output_data:
+  - YAML files in target directory
+  reviewed_at: '2026-02-22'
+  reviewed_by: <img/src/onerror=alert(1)/>
+  threat_actors:
+  - TA003
+  threats:
+    T001: default
+    T006: default
+    T007: default
+- data_flows:
+  - df_developer_to_cli
+  - df_cli_to_commands
+  - df_commands_to_yaml
+  - df_yaml_to_filesystem
+  goal: Validate all .tmdd/ YAML files for structural correctness and cross-reference
+    integrity
+  input_data:
+  - path to .tmdd directory
+  last_updated: '2026-02-22'
+  name: Threat Model Validation
+  output_data:
+  - validation results on stdout
+  reviewed_at: '2026-02-22'
+  reviewed_by: mik0w
+  threat_actors:
+  - TA002
+  threats:
+    T005: default
+    T008: accepted
+- data_flows:
+  - df_developer_to_cli
+  - df_cli_to_commands
+  - df_commands_to_yaml
+  - df_yaml_to_filesystem
+  - df_commands_to_prompts
+  - df_prompts_to_filesystem
+  - df_filesystem_to_agent
+  goal: Generate AI prompts for threat modeling new features or producing secure implementation
+    guidance
+  input_data:
+  - feature name
+  - description
+  - loaded threat model
+  last_updated: '2026-02-22'
+  name: Feature Workflow
+  output_data:
+  - prompt text files in .tmdd/out/
+  reviewed_at: '2026-02-22'
+  reviewed_by: mik0w
+  threat_actors:
+  - TA002
+  threats:
+    T007: default
+    T009: default
+- data_flows:
+  - df_developer_to_cli
+  - df_cli_to_commands
+  - df_commands_to_yaml
+  - df_yaml_to_filesystem
+  - df_commands_to_prompts
+  - df_prompts_to_filesystem
+  goal: Generate consolidated YAML and AI implementation prompts from the full threat
+    model
+  input_data:
+  - path to .tmdd directory
+  - optional feature filter
+  last_updated: '2026-02-22'
+  name: Compilation
+  output_data:
+  - consolidated .tm.yaml file
+  - prompt text file in .tmdd/out/
+  reviewed_at: '2026-02-22'
+  reviewed_by: mik0w
+  threat_actors:
+  - TA002
+  threats:
+    T007: default
+    T009: default
+- data_flows:
+  - df_developer_to_cli
+  - df_commands_to_yaml
+  - df_yaml_to_filesystem
+  - df_commands_to_html
+  - df_html_to_filesystem
+  - df_cdn_to_browser
+  - df_filesystem_to_viewer
+  goal: Generate a standalone interactive HTML threat model report with architecture
+    diagram
+  input_data:
+  - path to .tmdd directory
+  - output directory
+  - output filename
+  last_updated: '2026-02-22'
+  name: Report Generation
+  output_data:
+  - HTML report file with embedded Cytoscape.js diagram
+  reviewed_at: '2026-01-01'
+  reviewed_by: mik0w
+  threat_actors:
+  - TA001
+  - TA002
+  - TA003
+  threats:
+    T002: default
+    T003: default
+    T004: default
+    T007: default
+    T010: default
+    T011: default
+- data_flows:
+  - df_commands_to_yaml
+  - df_yaml_to_filesystem
+  - df_commands_to_html
+  - df_html_to_filesystem
+  - df_cdn_to_browser
+  - df_filesystem_to_viewer
+  goal: Generate a standalone interactive HTML architecture diagram with optional
+    feature highlighting
+  input_data:
+  - path to .tmdd directory
+  - optional feature name
+  last_updated: '2026-02-22'
+  name: Diagram Generation
+  output_data:
+  - HTML diagram file with embedded Cytoscape.js visualization
+  reviewed_at: '2026-02-22'
+  reviewed_by: mik0w
+  threat_actors:
+  - TA001
+  - TA002
+  threats:
+    T002: default
+    T003: default
+    T004: default
+    T010: default
+generated: '2026-02-25'
+mitigations:
+  M001:
+    description: Escape or quote user-provided name/description values before substituting
+      into YAML templates during init, using yaml.dump() or proper YAML string quoting
+      to prevent structural injection
+    references:
+    - file: src/commands/init.py
+      lines: 36-39
+  M002:
+    description: Pin CDN library versions with Subresource Integrity (SRI) hashes
+      on all <script> tags in generated HTML to prevent tampered JavaScript from executing
+    references:
+    - file: report.py
+      lines: 943-945
+    - file: diagram.py
+      lines: 143-145
+  M003:
+    description: Bundle Cytoscape.js and dagre libraries locally instead of relying
+      on CDN, eliminating the external dependency and enabling fully offline report
+      viewing
+    references:
+    - file: report.py
+      lines: 943-945
+  M004:
+    description: Replace innerHTML assignments in _DIAGRAM_JS with textContent for
+      plain text values, or use DOM createElement/createTextNode for safe HTML construction
+    references:
+    - file: report.py
+      lines: 572-872
+  M005:
+    description: Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS
+      and apply it to all threat model values (names, descriptions, labels) before
+      inserting into HTML strings
+    references:
+    - file: report.py
+      lines: 572-872
+  M006:
+    description: Add file size checks in load_yaml() before parsing, rejecting YAML
+      files exceeding a reasonable threshold (e.g., 1MB) to prevent resource exhaustion
+    references:
+    - file: src/utils.py
+      lines: 101-117
+  M007:
+    description: Validate and normalize the target path in init command, ensuring
+      it resolves to a subdirectory of the current working directory or an explicitly
+      allowed location
+    references:
+    - file: src/commands/init.py
+      lines: 22-23
+  M008:
+    description: Include .tmdd/out/ in the default .gitignore generated by tmdd init,
+      and add a warning comment in generated output files noting they contain sensitive
+      security analysis
+    references:
+    - file: src/commands/init.py
+  M009: Rely on Git version control for change tracking and attribution of .tmdd/
+    YAML files; document this requirement in README and generated AGENTS.md
+  M010:
+    description: Add clear delimiter markers and role boundaries in generated AI prompts
+      to reduce the effectiveness of prompt injection from threat model content
+    references:
+    - file: src/generators/agent_prompt.py
+      lines: 17-19
+    - file: src/generators/threat_prompt.py
+  M011:
+    description: Enhance _safe_json() to escape additional dangerous characters beyond
+      </ including HTML entities and ensure Content-Type is set correctly for embedded
+      JSON data
+    references:
+    - file: report.py
+      lines: 113-114
+  M012:
+    description: Validate the --name output filename in report.py by stripping path
+      separators and applying safe_name() or os.path.basename() before joining with
+      the output directory, consistent with diagram.py's safe_name() approach
+    references:
+    - file: report.py
+      lines: 1085-1088
+system:
+  description: Threat Modeling Driven Development - a Python CLI tool that manages
+    YAML-based threat models, validates cross-references, generates AI prompts, and
+    produces interactive HTML reports and diagrams
+  name: TMDD CLI
+  version: 0.5.1
+threat_actors:
+  TA001: External attacker who compromises a CDN or npm package used by TMDD-generated
+    HTML reports
+  TA002: Malicious insider with filesystem access who tampers with .tmdd/ YAML files
+    to inject harmful content into reports or AI prompts
+  TA003: Automated CI/CD pipeline that invokes TMDD commands with untrusted or user-controlled
+    input parameters
+threats:
+  T001:
+    cwe: CWE-74
+    description: In src/commands/init.py:36-39, user-provided --name and --description
+      values are substituted into YAML templates using simple str.replace() without
+      escaping YAML metacharacters. A name containing newlines or YAML syntax (e.g.,
+      colons, brackets) could produce malformed or structurally altered YAML output
+      files.
+    name: YAML template injection via init command name/description
+    severity: low
+    stride: T
+    suggested_mitigations:
+    - M001
+  T002:
+    cwe: CWE-829
+    description: report.py and diagram.py embed <script> tags loading from unpkg.com
+      (cytoscape@3.30.4, dagre@0.8.5, cytoscape-dagre@2.5.0). If unpkg.com is compromised,
+      a package is hijacked, or a MITM attack occurs, malicious JavaScript would execute
+      in the report viewer's browser with full DOM access to the threat model data.
+    name: Supply chain attack via CDN JavaScript dependencies
+    severity: high
+    stride: T
+    suggested_mitigations:
+    - M002
+    - M003
+  T003:
+    cwe: CWE-79
+    description: In report.py's _DIAGRAM_JS (line 572+), the showFeature() function
+      builds HTML strings from threat model data (threat names, descriptions, goals)
+      and injects them via innerHTML. Although data passes through JSON.parse from
+      an embedded <script> tag, YAML values containing HTML (e.g., <img onerror=...>)
+      would be rendered as active markup in the viewer's browser.
+    name: Stored XSS via innerHTML in diagram JavaScript
+    severity: medium
+    stride: T
+    suggested_mitigations:
+    - M004
+    - M005
+  T004:
+    cwe: CWE-79
+    description: In report.py's _DIAGRAM_JS, the cy.on('tap') handler for nodes and
+      edges builds HTML strings using d.label, d.description, d.technology, and d.flowId
+      directly, injecting them via info.innerHTML without HTML encoding. Malicious
+      content in YAML component descriptions would execute as JavaScript.
+    name: Stored XSS via innerHTML in node-info panel
+    severity: medium
+    stride: T
+    suggested_mitigations:
+    - M004
+    - M005
+  T005:
+    cwe: CWE-400
+    description: yaml.safe_load() in src/utils.py:110 parses YAML files without size
+      limits. An extremely large or deeply nested YAML file in .tmdd/ could cause
+      excessive memory consumption or CPU usage during lint, compile, or feature operations.
+    name: Denial of service via deeply nested or oversized YAML files
+    severity: low
+    stride: D
+    suggested_mitigations:
+    - M006
+  T006:
+    cwe: CWE-22
+    description: In src/commands/init.py:23, Path(args.path).mkdir(parents=True) creates
+      directories at any user-specified path. Combined with template file writing
+      (line 34-40), a script or CI pipeline invoking tmdd init with a crafted path
+      could create files in unintended locations.
+    name: Arbitrary file creation via init command path argument
+    severity: low
+    stride: T
+    suggested_mitigations:
+    - M007
+  T007:
+    cwe: CWE-200
+    description: Compiled YAML (.tmdd/out/*.tm.yaml), HTML reports, and prompt files
+      contain full threat model details including threat descriptions, severity ratings,
+      CWE references, and internal architecture details. If the .tmdd/out/ directory
+      is accidentally committed to a public repository or shared, it exposes the complete
+      attack surface analysis.
+    name: Information disclosure via generated output files
+    severity: medium
+    stride: I
+    suggested_mitigations:
+    - M008
+  T008:
+    cwe: CWE-778
+    description: TMDD stores threat models as plain YAML files with no built-in change
+      tracking, signing, or attribution. Anyone with filesystem access can modify
+      threats, mitigations, or feature mappings without a trace, undermining the integrity
+      of the security assessment.
+    name: No audit trail for threat model modifications
+    severity: medium
+    stride: R
+    suggested_mitigations:
+    - M009
+  T009:
+    cwe: CWE-77
+    description: In src/generators/agent_prompt.py and threat_prompt.py, threat model
+      data (threat names, descriptions, mitigation text) is embedded directly into
+      AI prompt text without sanitization. A malicious actor who can edit YAML files
+      could inject adversarial instructions into the prompt that alter the AI agent's
+      behavior.
+    name: Prompt injection via threat model content in generated AI prompts
+    severity: medium
+    stride: T
+    suggested_mitigations:
+    - M010
+  T010:
+    cwe: CWE-79
+    description: In report.py:114, _safe_json() escapes </ to <\/ to prevent script
+      tag breakout. However, other injection vectors (e.g., HTML entities, Unicode
+      escapes) in threat model strings embedded in the <script type='application/json'>
+      block could potentially bypass this single-pattern defense.
+    name: Script tag breakout in embedded JSON diagram data
+    severity: low
+    stride: T
+    suggested_mitigations:
+    - M005
+    - M011
+  T011:
+    cwe: CWE-22
+    description: In report.py:1085, the --name argument is joined with the output
+      directory via Path(out) / output_name without validation. Unlike diagram.py
+      which uses safe_name() for filename generation (line 156), report.py passes
+      the raw user input directly, allowing path traversal characters (e.g., ../../malicious.html)
+      to write the HTML report outside the intended output directory.
+    name: Report output path traversal via --name parameter
+    severity: low
+    stride: T
+    suggested_mitigations:
+    - M012

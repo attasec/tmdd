@@ -1,58 +1,57 @@
 # Threat Catalog - Common web application threats
 threats:
-  T001:
+  sql_injection:
     name: SQL Injection
     description: Unsanitized input reaches database queries
     severity: high
     stride: T
     cwe: CWE-89
-    suggested_mitigations: [M001, M002]
+    suggested_mitigations: [parameterized_queries, input_validation]
 
-  T002:
+  xss:
     name: Cross-Site Scripting (XSS)
     description: Malicious scripts execute in victim's browser
     severity: high
     stride: T
     cwe: CWE-79
-    suggested_mitigations: [M003, M004]
+    suggested_mitigations: [output_encoding, csp_headers]
 
-  T003:
+  broken_auth:
     name: Broken Authentication
     description: Weak session management or credential handling
     severity: critical
     stride: S
     cwe: CWE-287
-    suggested_mitigations: [M005, M006]
+    suggested_mitigations: [secure_sessions, mfa]
 
-  T004:
+  sensitive_data_exposure:
     name: Sensitive Data Exposure
     description: Sensitive data exposed in transit or at rest
     severity: high
     stride: I
     cwe: CWE-200
-    suggested_mitigations: [M007, M008]
+    suggested_mitigations: [tls, encryption_at_rest]
 
-  T005:
+  broken_access_control:
     name: Broken Access Control
     description: Users can access resources beyond their permissions
     severity: high
     stride: E
     cwe: CWE-284
-    suggested_mitigations: [M009, M010]
+    suggested_mitigations: [rbac, server_side_authz]
 
-  T006:
+  csrf:
     name: CSRF (Cross-Site Request Forgery)
     description: Attacker tricks user into performing unwanted actions
     severity: medium
     stride: S
     cwe: CWE-352
-    suggested_mitigations: [M011]
+    suggested_mitigations: [csrf_tokens]
 
-  T007:
+  rate_limiting_bypass:
     name: Rate Limiting Bypass
     description: Insufficient rate limiting enables brute-force attacks
     severity: medium
     stride: D
     cwe: CWE-770
-    suggested_mitigations: [M012]
-
+    suggested_mitigations: [rate_limiting]

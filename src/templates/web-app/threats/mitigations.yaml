@@ -1,24 +1,23 @@
 # Mitigations Catalog - Security controls for web applications
 #
 # Each mitigation can be a simple string or a rich object:
-#   M001: "Description"
-#   M002:
+#   parameterized_queries: "Description"
+#   input_validation:
 #     description: "Description"
 #     references:                        # optional code references
 #       - file: "src/auth/middleware.ts"
 #         lines: "42-58"                 # optional line or range
 #
 mitigations:
-  M001: Parameterized queries / prepared statements
-  M002: Input validation and sanitization
-  M003: Output encoding (HTML, JavaScript, URL context)
-  M004: Content Security Policy (CSP) headers
-  M005: Secure session management (HttpOnly, Secure flags)
-  M006: Multi-factor authentication (MFA)
-  M007: TLS 1.3 for all connections
-  M008: Encryption at rest (AES-256)
-  M009: Role-based access control (RBAC)
-  M010: Server-side authorization checks
-  M011: CSRF tokens on state-changing requests
-  M012: Rate limiting with exponential backoff
-
+  parameterized_queries: Parameterized queries / prepared statements
+  input_validation: Input validation and sanitization
+  output_encoding: Output encoding (HTML, JavaScript, URL context)
+  csp_headers: Content Security Policy (CSP) headers
+  secure_sessions: Secure session management (HttpOnly, Secure flags)
+  mfa: Multi-factor authentication (MFA)
+  tls: TLS 1.3 for all connections
+  encryption_at_rest: Encryption at rest (AES-256)
+  rbac: Role-based access control (RBAC)
+  server_side_authz: Server-side authorization checks
+  csrf_tokens: CSRF tokens on state-changing requests
+  rate_limiting: Rate limiting with exponential backoff
