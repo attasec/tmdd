@@ -4,7 +4,7 @@
 
 | Components | Data Flows | Features | Threats | Mitigations | Active Threats | Reviewed |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| 8 | 12 | 6 | 11 | 12 | 11 | 6/6 |
+| 8 | 12 | 6 | 8 | 9 | 8 | 6/6 |
 
 ---
 
@@ -57,8 +57,6 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
 | 🟢 | `yaml_template_injection` YAML template injection via init command name/description | **T** | `yaml_escape_init_input` *(default)* |
-| 🟢 | `init_path_traversal` Arbitrary file creation via init command path argument | **T** | `validate_init_path` *(default)* |
-| 🟡 | `output_info_disclosure` Information disclosure via generated output files | **I** | `gitignore_output_dir` *(default)* |
 
 ### Threat Model Validation
 
@@ -71,7 +69,6 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
-| 🟢 | `yaml_dos_oversized` Denial of service via deeply nested or oversized YAML files | **D** | `yaml_file_size_limit` *(default)* |
 | 🟡 | `no_audit_trail` No audit trail for threat model modifications | **R** | **Risk accepted** |
 
 ### Feature Workflow
@@ -86,7 +83,6 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
 | 🟡 | `prompt_injection` Prompt injection via threat model content in generated AI prompts | **T** | `prompt_delimiters` *(default)* |
-| 🟡 | `output_info_disclosure` Information disclosure via generated output files | **I** | `gitignore_output_dir` *(default)* |
 
 ### Compilation
 
@@ -99,7 +95,6 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 
 | | Threat | STRIDE | Mitigations |
 |:---:|:---|:---:|:---|
-| 🟡 | `output_info_disclosure` Information disclosure via generated output files | **I** | `gitignore_output_dir` *(default)* |
 | 🟡 | `prompt_injection` Prompt injection via threat model content in generated AI prompts | **T** | `prompt_delimiters` *(default)* |
 
 ### Report Generation
@@ -116,7 +111,6 @@ Updated: 2026-02-22 · ⚠️ Reviewed by mik0w (2026-01-01) — **needs re-revi
 | 🟠 | `cdn_supply_chain_attack` Supply chain attack via CDN JavaScript dependencies | **T** | `sri_hashes_cdn`, `bundle_libs_locally` *(default)* |
 | 🟡 | `xss_stored_diagram` Stored XSS via innerHTML in diagram JavaScript | **T** | `replace_innerhtml_textcontent`, `js_html_escape_helper` *(default)* |
 | 🟡 | `xss_stored_node_info` Stored XSS via innerHTML in node-info panel | **T** | `replace_innerhtml_textcontent`, `js_html_escape_helper` *(default)* |
-| 🟡 | `output_info_disclosure` Information disclosure via generated output files | **I** | `gitignore_output_dir` *(default)* |
 | 🟢 | `json_script_breakout` Script tag breakout in embedded JSON diagram data | **T** | `js_html_escape_helper`, `enhanced_safe_json` *(default)* |
 | 🟢 | `report_path_traversal` Report output path traversal via --name parameter | **T** | `validate_report_filename` *(default)* |
 
@@ -178,9 +172,6 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 | `cdn_supply_chain_attack` | **Supply chain attack via CDN JavaScript dependencies** | 🟠 HIGH | **T** Tampering | `CWE-829` | `sri_hashes_cdn, bundle_libs_locally` | ✅ |
 | `xss_stored_diagram` | **Stored XSS via innerHTML in diagram JavaScript** | 🟡 MEDIUM | **T** Tampering | `CWE-79` | `replace_innerhtml_textcontent, js_html_escape_helper` | ✅ |
 | `xss_stored_node_info` | **Stored XSS via innerHTML in node-info panel** | 🟡 MEDIUM | **T** Tampering | `CWE-79` | `replace_innerhtml_textcontent, js_html_escape_helper` | ✅ |
-| `yaml_dos_oversized` | **Denial of service via deeply nested or oversized YAML files** | 🟢 LOW | **D** Denial of Service | `CWE-400` | `yaml_file_size_limit` | ✅ |
-| `init_path_traversal` | **Arbitrary file creation via init command path argument** | 🟢 LOW | **T** Tampering | `CWE-22` | `validate_init_path` | ✅ |
-| `output_info_disclosure` | **Information disclosure via generated output files** | 🟡 MEDIUM | **I** Info Disclosure | `CWE-200` | `gitignore_output_dir` | ✅ |
 | `no_audit_trail` | **No audit trail for threat model modifications** | 🟡 MEDIUM | **R** Repudiation | `CWE-778` | `git_change_tracking` | ✅ |
 | `prompt_injection` | **Prompt injection via threat model content in generated AI prompts** | 🟡 MEDIUM | **T** Tampering | `CWE-77` | `prompt_delimiters` | ✅ |
 | `json_script_breakout` | **Script tag breakout in embedded JSON diagram data** | 🟢 LOW | **T** Tampering | `CWE-79` | `js_html_escape_helper, enhanced_safe_json` | ✅ |
@@ -197,9 +188,6 @@ Updated: 2026-02-22 · ✅ Reviewed by mik0w (2026-02-22)
 | `bundle_libs_locally` | Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing (`report.py`:943-945) | ✅ |
 | `replace_innerhtml_textcontent` | Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction (`report.py`:572-872) | ✅ |
 | `js_html_escape_helper` | Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings (`report.py`:572-872) | ✅ |
-| `yaml_file_size_limit` | Add file size checks in load_yaml() before parsing, rejecting YAML files exceeding a reasonable threshold (e.g., 1MB) to prevent resource exhaustion (`src/utils.py`:101-117) | ✅ |
-| `validate_init_path` | Validate and normalize the target path in init command, ensuring it resolves to a subdirectory of the current working directory or an explicitly allowed location (`src/commands/init.py`:22-23) | ✅ |
-| `gitignore_output_dir` | Include .tmdd/out/ in the default .gitignore generated by tmdd init, and add a warning comment in generated output files noting they contain sensitive security analysis (`src/commands/init.py`) | ✅ |
 | `git_change_tracking` | Rely on Git version control for change tracking and attribution of .tmdd/ YAML files; document this requirement in README and generated AGENTS.md | — |
 | `prompt_delimiters` | Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content (`src/generators/agent_prompt.py`:17-19, `src/generators/threat_prompt.py`) | ✅ |
 | `enhanced_safe_json` | Enhance _safe_json() to escape additional dangerous characters beyond </ including HTML entities and ensure Content-Type is set correctly for embedded JSON data (`report.py`:113-114) | ✅ |
