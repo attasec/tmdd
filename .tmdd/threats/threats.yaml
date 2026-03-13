@@ -37,29 +37,6 @@ threats:
     cwe: CWE-79
     suggested_mitigations: [replace_innerhtml_textcontent, js_html_escape_helper]
 
-  yaml_dos_oversized:
-    name: "Denial of service via deeply nested or oversized YAML files"
-    description: "yaml.safe_load() in src/utils.py:110 parses YAML files without size limits. An extremely large or deeply nested YAML file in .tmdd/ could cause excessive memory consumption or CPU usage during lint, compile, or feature operations."
-    severity: low
-    stride: D
-    cwe: CWE-400
-    suggested_mitigations: [yaml_file_size_limit]
-
-  init_path_traversal:
-    name: "Arbitrary file creation via init command path argument"
-    description: "In src/commands/init.py:23, Path(args.path).mkdir(parents=True) creates directories at any user-specified path. Combined with template file writing (line 34-40), a script or CI pipeline invoking tmdd init with a crafted path could create files in unintended locations."
-    severity: low
-    stride: T
-    cwe: CWE-22
-    suggested_mitigations: [validate_init_path]
-
-  output_info_disclosure:
-    name: "Information disclosure via generated output files"
-    description: "Compiled YAML (.tmdd/out/*.tm.yaml), HTML reports, and prompt files contain full threat model details including threat descriptions, severity ratings, CWE references, and internal architecture details. If the .tmdd/out/ directory is accidentally committed to a public repository or shared, it exposes the complete attack surface analysis."
-    severity: medium
-    stride: I
-    cwe: CWE-200
-    suggested_mitigations: [gitignore_output_dir]
 
   no_audit_trail:
     name: "No audit trail for threat model modifications"

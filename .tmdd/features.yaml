@@ -11,8 +11,6 @@ features:
     threat_actors: [ci_pipeline_untrusted]
     threats:
       yaml_template_injection: default
-      init_path_traversal: default
-      output_info_disclosure: default
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
@@ -24,7 +22,6 @@ features:
     data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem]
     threat_actors: [malicious_insider_fs]
     threats:
-      yaml_dos_oversized: default
       no_audit_trail: accepted
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
@@ -38,7 +35,6 @@ features:
     threat_actors: [malicious_insider_fs]
     threats:
       prompt_injection: default
-      output_info_disclosure: default
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
@@ -50,7 +46,6 @@ features:
     data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem]
     threat_actors: [malicious_insider_fs]
     threats:
-      output_info_disclosure: default
       prompt_injection: default
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
@@ -66,7 +61,6 @@ features:
       cdn_supply_chain_attack: default
       xss_stored_diagram: default
       xss_stored_node_info: default
-      output_info_disclosure: default
       json_script_breakout: default
       report_path_traversal: default
     last_updated: "2026-02-22"
