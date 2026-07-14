@@ -15,11 +15,37 @@ technologies, and attack surface. Never produce generic threats.
 
 ```bash
 tmdd init .tmdd --template web-app -n "Name" -d "Description"  # scaffold
-tmdd lint .tmdd                                                  # validate
+tmdd lint .tmdd                                                  # validate (+ check references resolve)
 tmdd feature "Name" -d "Description"                            # new feature
 tmdd feature "Name"                                             # get impl prompt
+tmdd review .tmdd --base origin/main                           # map a diff to affected threats
 tmdd compile .tmdd                                              # generate output
 ```
+
+## Reviewing a Diff Against the Model
+
+`tmdd review` maps changed files to the threats they may affect, via each component's
+`source_paths` globs -> data flows -> features -> threats/mitigations. Use it when asked
+to security-review a change, PR, or branch:
+
+```bash
+tmdd review .tmdd --base origin/main --format md    # markdown checklist for a PR
+tmdd review .tmdd --files src/routes/search.ts      # explicit file(s)
+```
+
+For this to work, keep component `source_paths` accurate — they are the link between the
+model and the code. `tmdd review` also reports coverage gaps: changed files matching no
+component (unmodeled attack surface) and components with no `source_paths` (invisible to
+the mapping). When you see an unmapped changed file that is real source, add or extend a
+component's `source_paths` so future reviews catch it.
+
+## Mitigation References Must Resolve
+
+When a mitigation uses the rich format with `references`, the `file` paths must point at
+files that actually exist (resolved from the repo root). `tmdd lint` warns on missing
+files, and `tmdd lint --strict-refs` treats them as errors. Only reference a file that
+exists; for a not-yet-implemented control, describe it in prose without a `references`
+entry until the file lands.
 
 ## Architecture-First Workflow
 

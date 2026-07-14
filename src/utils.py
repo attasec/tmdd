@@ -1,4 +1,5 @@
 """TMDD shared utilities - YAML loading, path helpers, and exceptions."""
+
 import logging
 import re
 import sys
@@ -19,6 +20,7 @@ DEFAULT_MODEL_DIR = ".tmdd"
 # Exceptions
 # ---------------------------------------------------------------------------
 
+
 class TMDDError(Exception):
     """Base exception for all TMDD errors."""
 
@@ -30,6 +32,7 @@ class ModelNotFoundError(TMDDError):
 # ---------------------------------------------------------------------------
 # Path helpers
 # ---------------------------------------------------------------------------
+
 
 def resolve_model_dir(path):
     """Resolve and validate a model directory path.
@@ -74,8 +77,70 @@ def safe_name(text):
 
 
 # ---------------------------------------------------------------------------
+# Glob matching (component source_paths <-> changed files)
+# ---------------------------------------------------------------------------
+
+
+def _normalize_path(path):
+    """Normalize a path for matching: use forward slashes, strip './' and leading '/'."""
+    p = str(path).replace("\\", "/").strip()
+    while p.startswith("./"):
+        p = p[2:]
+    return p.lstrip("/")
+
+
+def glob_to_regex(pattern):
+    """Translate a git-style glob into an anchored regex string.
+
+    Matching rules (POSIX/gitignore-flavored):
+        **/   matches zero or more directory segments
+        **    matches any characters, including '/'
+        *     matches any characters except '/'
+        ?     matches a single character except '/'
+
+    Everything else is matched literally. Paths are compared with '/'
+    separators regardless of platform.
+    """
+    pattern = _normalize_path(pattern)
+    out = []
+    i, n = 0, len(pattern)
+    while i < n:
+        c = pattern[i]
+        if c == "*":
+            if i + 1 < n and pattern[i + 1] == "*":
+                # '**' — consume it, and an immediately following '/' if present
+                if i + 2 < n and pattern[i + 2] == "/":
+                    out.append("(?:.*/)?")
+                    i += 3
+                else:
+                    out.append(".*")
+                    i += 2
+            else:
+                out.append("[^/]*")
+                i += 1
+        elif c == "?":
+            out.append("[^/]")
+            i += 1
+        else:
+            out.append(re.escape(c))
+            i += 1
+    return "^" + "".join(out) + "$"
+
+
+def path_matches_glob(path, pattern):
+    """Return True if *path* matches the git-style glob *pattern*."""
+    return re.match(glob_to_regex(pattern), _normalize_path(path)) is not None
+
+
+def path_matches_any(path, patterns):
+    """Return True if *path* matches any glob in *patterns*."""
+    return any(path_matches_glob(path, p) for p in (patterns or []))
+
+
+# ---------------------------------------------------------------------------
 # YAML loading
 # ---------------------------------------------------------------------------
+
 
 def get_mitigation_desc(entry, fallback=""):
     """Return the description string from a mitigation entry.
@@ -131,6 +196,10 @@ def load_threat_model(model_dir):
         "features": load_yaml(model_path / "features.yaml").get("features", []),
         "data_flows": load_yaml(model_path / "data_flows.yaml").get("data_flows", []),
         "threats": load_yaml(threats_path / "threats.yaml").get("threats", {}),
-        "mitigations": load_yaml(threats_path / "mitigations.yaml").get("mitigations", {}),
-        "threat_actors": load_yaml(threats_path / "threat_actors.yaml").get("threat_actors", []),
+        "mitigations": load_yaml(threats_path / "mitigations.yaml").get(
+            "mitigations", {}
+        ),
+        "threat_actors": load_yaml(threats_path / "threat_actors.yaml").get(
+            "threat_actors", []
+        ),
     }

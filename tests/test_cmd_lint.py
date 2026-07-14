@@ -402,3 +402,58 @@ class TestCmdLintRichMitigations:
         args = make_args(path=str(model_dir))
         result = cmd_lint(args)
         assert result == 0
+
+
+class TestCmdLintReferenceResolution:
+    """The reference-existence check that closes the loop with real code."""
+
+    _MITIGATIONS = (
+        "mitigations:\n"
+        "  parameterized_queries:\n"
+        "    description: Control\n"
+        "    references:\n"
+        "      - file: src/real.py\n"
+        "  account_lockout:\n"
+        "    description: Control\n"
+        "    references:\n"
+        "      - file: src/missing.py\n"
+    )
+
+    def _model_with_repo(self, tmp_path):
+        """Model dir at <repo>/.tmdd so repo_root defaults to <repo>."""
+        repo = tmp_path / "repo"
+        (repo / "src").mkdir(parents=True)
+        (repo / "src" / "real.py").write_text("x = 1\n")
+        model_dir = repo / ".tmdd"
+        _write_model(model_dir, overrides={"threats/mitigations.yaml": self._MITIGATIONS})
+        return repo, model_dir
+
+    def test_missing_reference_is_warning_not_error(self, tmp_path, capsys):
+        repo, model_dir = self._model_with_repo(tmp_path)
+        args = make_args(path=str(model_dir))
+        result = cmd_lint(args)
+        assert result == 0  # warnings do not fail lint
+        out = capsys.readouterr().out
+        assert "file not found: 'src/missing.py'" in out
+        assert "src/real.py" not in out  # existing reference is silent
+
+    def test_strict_refs_promotes_to_error(self, tmp_path, capsys):
+        repo, model_dir = self._model_with_repo(tmp_path)
+        args = make_args(path=str(model_dir), strict_refs=True)
+        result = cmd_lint(args)
+        assert result == 1
+        out = capsys.readouterr().out
+        assert "file not found: 'src/missing.py'" in out
+
+    def test_repo_root_override(self, tmp_path, capsys):
+        """With an explicit repo_root where the file exists, no warning fires."""
+        repo, model_dir = self._model_with_repo(tmp_path)
+        # create the previously-missing file under a different root
+        alt = tmp_path / "alt"
+        (alt / "src").mkdir(parents=True)
+        (alt / "src" / "real.py").write_text("x\n")
+        (alt / "src" / "missing.py").write_text("x\n")
+        args = make_args(path=str(model_dir), repo_root=str(alt))
+        result = cmd_lint(args)
+        assert result == 0
+        assert "file not found" not in capsys.readouterr().out

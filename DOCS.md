@@ -12,6 +12,7 @@ For a quick overview, see the [README](README.md).
 | `tmdd init` | Create a new TMDD project from template |
 | `tmdd lint` | Validate threat model files |
 | `tmdd feature` | Threat-model-first feature workflow |
+| `tmdd review` | Map a code diff to the threats it may affect |
 | `tmdd compile` | Generate consolidated YAML and prompts |
 | `tmdd-diagram` | Generate interactive architecture diagram (HTML) |
 | `tmdd-report` | Generate threat model report (HTML or Markdown) |
@@ -48,6 +49,64 @@ tmdd lint ./my-project
 ```
 
 Exit codes: `0` = OK, `1` = validation errors, `2` = fatal (missing files)
+
+**Reference resolution.** Mitigations using the rich format may point at implementation
+files via `references`. `lint` checks that each referenced file exists on disk, catching
+drift and hallucinated paths — the "closing the loop" check between the model and the code.
+
+- File paths resolve against `--repo-root` (default: the parent of the model dir, i.e. the
+  repo root when `.tmdd/` sits at the top level).
+- A missing referenced file is a **warning** by default (a control may point at a *planned*
+  file that doesn't exist yet).
+- `--strict-refs` promotes missing references to **errors** — useful for CI gating once
+  controls are expected to be implemented.
+
+```bash
+tmdd lint                      # missing references -> warnings
+tmdd lint --strict-refs        # missing references -> errors (exit 1)
+tmdd lint --repo-root ..       # resolve reference paths against a different root
+```
+
+### review
+
+Maps a code diff to the threats it may affect, closing the loop from changed files back to
+the threat model:
+
+```
+changed files --(component.source_paths globs)--> components
+              --(data_flows source/destination)--> data flows
+              --(features.data_flows)------------> features
+              --(features.threats)---------------> threats + mitigations
+```
+
+The output is a deterministic, review-ready checklist of the threats a change touches, plus
+coverage gaps (changed files that match no component's `source_paths`, and components that
+have no `source_paths` at all and are therefore invisible to the mapping).
+
+```bash
+# Review the working-tree diff vs HEAD (default)
+tmdd review
+
+# Review a branch against its base (PR-style, uses <base>...HEAD)
+tmdd review --base origin/main
+
+# Review only staged changes
+tmdd review --staged
+
+# Bypass git — pass an explicit file list (handy in CI or from another tool)
+tmdd review --files src/routes/search.ts src/db/queries.ts
+
+# Machine-readable output for agents / PR bots
+tmdd review --base origin/main --format json
+tmdd review --base origin/main --format md
+```
+
+Options: `--base <ref>`, `--staged`, `--files <paths...>`, `--repo-root <dir>`,
+`--format {text,json,md}`. Changed-file paths (from git or `--files`) are matched against
+component `source_paths` relative to `--repo-root` (default: the parent of the model dir).
+
+This requires components to declare `source_paths` globs. See the threat model structure
+below.
 
 ### feature
 
@@ -162,7 +221,7 @@ All IDs use the same pattern: `^[a-z][a-z0-9_]*$` — lowercase descriptive name
 ```
 tmdd/
 ├── src/                     # CLI package (tmdd command)
-│   ├── commands/            # Subcommands (init, lint, feature, compile)
+│   ├── commands/            # Subcommands (init, lint, feature, review, compile)
 │   ├── generators/          # AI prompt generators (threat + implementation)
 │   └── templates/           # Project templates (minimal, web-app, api)
 ├── agents/                  # Pre-built AI agent instructions

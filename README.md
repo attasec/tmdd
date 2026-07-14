@@ -118,12 +118,26 @@ Without these instructions, AI models commonly produce unusable threat models:
 ## Generate outputs
 
 ```bash
-tmdd lint                          # validate the model
+tmdd lint                          # validate the model (+ check mitigation references resolve)
+tmdd review --base origin/main     # map a diff to the threats it affects
 tmdd-report                        # HTML report
 tmdd-report --format md            # Markdown report
 tmdd-diagram                       # interactive architecture diagram (HTML)
 tmdd compile                       # consolidated YAML + AI prompt
 ```
+
+### Closing the loop with your code
+
+Two features keep the threat model honest against the actual codebase:
+
+- **`tmdd review`** maps a code diff to the threats it touches. Changed files are matched to
+  components via their `source_paths` globs, then traced through data flows and features to the
+  affected threats and their required mitigations — a deterministic, review-ready checklist.
+  Feed `--format json`/`md` to an AI reviewer or PR bot so it focuses on the threats a change
+  actually affects. It also flags coverage gaps (changed files matching no component).
+- **`tmdd lint`** verifies that mitigation `references` point at files that actually exist,
+  catching drift and hallucinated paths. Missing files are warnings by default; `--strict-refs`
+  makes them CI-gating errors.
 
 ---
 

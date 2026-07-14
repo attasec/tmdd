@@ -3,7 +3,7 @@
 import argparse
 import sys
 
-from .commands import init, lint, feature, compile
+from .commands import init, lint, feature, compile, review
 from .utils import DEFAULT_MODEL_DIR, TMDDError
 
 
@@ -12,6 +12,7 @@ _COMMANDS = {
     "lint": lint.cmd_lint,
     "feature": feature.cmd_feature,
     "compile": compile.cmd_compile,
+    "review": review.cmd_review,
 }
 
 
@@ -25,26 +26,96 @@ def main():
 
     # init
     i = sub.add_parser("init", help="Create a new TMDD project")
-    i.add_argument("path", nargs="?", default=DEFAULT_MODEL_DIR, help=f"Directory to initialize (default: {DEFAULT_MODEL_DIR})")
+    i.add_argument(
+        "path",
+        nargs="?",
+        default=DEFAULT_MODEL_DIR,
+        help=f"Directory to initialize (default: {DEFAULT_MODEL_DIR})",
+    )
     i.add_argument("-n", "--name", default="My System", help="System name")
-    i.add_argument("-d", "--description", default="System description", help="Description")
-    i.add_argument("-t", "--template", default="minimal", help="Template (minimal, web-app, api)")
+    i.add_argument(
+        "-d", "--description", default="System description", help="Description"
+    )
+    i.add_argument(
+        "-t", "--template", default="minimal", help="Template (minimal, web-app, api)"
+    )
     i.add_argument("-l", "--list", action="store_true", help="List templates")
 
     # lint
     l = sub.add_parser("lint", help="Validate threat model")
-    l.add_argument("path", nargs="?", default=DEFAULT_MODEL_DIR, help=f"Threat model directory (default: {DEFAULT_MODEL_DIR})")
-    l.add_argument("--no-mitigations", action="store_true", help="Allow unmapped threats (flat list instead of threat→mitigation mapping)")
+    l.add_argument(
+        "path",
+        nargs="?",
+        default=DEFAULT_MODEL_DIR,
+        help=f"Threat model directory (default: {DEFAULT_MODEL_DIR})",
+    )
+    l.add_argument(
+        "--no-mitigations",
+        action="store_true",
+        help="Allow unmapped threats (flat list instead of threat→mitigation mapping)",
+    )
+    l.add_argument(
+        "--strict-refs",
+        action="store_true",
+        help="Treat mitigation references pointing to missing files as errors (default: warnings)",
+    )
+    l.add_argument(
+        "--repo-root",
+        help="Root the mitigation 'references' file paths resolve against (default: parent of the model dir)",
+    )
+
+    # review
+    r = sub.add_parser("review", help="Map a code diff to the threats it may affect")
+    r.add_argument(
+        "path",
+        nargs="?",
+        default=DEFAULT_MODEL_DIR,
+        help=f"Threat model directory (default: {DEFAULT_MODEL_DIR})",
+    )
+    r.add_argument(
+        "--base",
+        help="Diff against this git ref (uses <base>...HEAD, e.g. origin/main)",
+    )
+    r.add_argument(
+        "--staged",
+        action="store_true",
+        help="Review staged changes (git diff --cached) instead of the working tree",
+    )
+    r.add_argument(
+        "--files",
+        nargs="+",
+        help="Explicit list of changed files to review (bypasses git)",
+    )
+    r.add_argument(
+        "--repo-root",
+        help="Root the changed file paths are relative to (default: parent of the model dir)",
+    )
+    r.add_argument(
+        "--format",
+        choices=["text", "json", "md"],
+        default="text",
+        help="Output format (default: text)",
+    )
 
     # feature
     f = sub.add_parser("feature", help="Threat-model-first feature workflow")
     f.add_argument("name", help="Feature name")
-    f.add_argument("-p", "--path", default=DEFAULT_MODEL_DIR, help=f"Threat model directory (default: {DEFAULT_MODEL_DIR})")
+    f.add_argument(
+        "-p",
+        "--path",
+        default=DEFAULT_MODEL_DIR,
+        help=f"Threat model directory (default: {DEFAULT_MODEL_DIR})",
+    )
     f.add_argument("-d", "--description", help="Feature description")
 
     # compile
     c = sub.add_parser("compile", help="Generate consolidated files")
-    c.add_argument("path", nargs="?", default=DEFAULT_MODEL_DIR, help=f"Threat model directory (default: {DEFAULT_MODEL_DIR})")
+    c.add_argument(
+        "path",
+        nargs="?",
+        default=DEFAULT_MODEL_DIR,
+        help=f"Threat model directory (default: {DEFAULT_MODEL_DIR})",
+    )
     c.add_argument("-f", "--feature", help="Generate for specific feature")
 
     args = p.parse_args()
