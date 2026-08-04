@@ -69,3 +69,27 @@ threats:
     stride: T
     cwe: CWE-22
     suggested_mitigations: [validate_report_filename]
+
+  glob_redos:
+    name: "Regex denial of service via crafted component source_paths glob"
+    description: "In src/utils.py:92-127, glob_to_regex() translates a component's source_paths glob into a regex, mapping each '**' to '.*'. A source_paths value crafted with many wildcard segments (e.g. '**a**a**a...') compiles to a regex with many chained '.*' groups that exhibits catastrophic/polynomial backtracking when matched against long non-matching paths during 'tmdd review' (path_matches_any, src/utils.py:135). An attacker able to edit components.yaml can hang the review command (denial of service), which is especially relevant when review runs in CI over an untrusted branch's threat model."
+    severity: medium
+    stride: D
+    cwe: CWE-1333
+    suggested_mitigations: [bound_glob_complexity]
+
+  review_git_arg_injection:
+    name: "Argument injection into git subprocess via --base ref"
+    description: "In src/commands/review.py:57, the user-supplied --base value is interpolated into the git revision argument as f'{base}...HEAD' and passed to git diff via subprocess.run (no shell, args as a list). The trailing '...HEAD' concatenation prevents a crafted --base from forming a clean leading option, so classic argument injection is largely blocked, but the ref is still handed to git unvalidated. In a CI context that forwards an untrusted PR ref into --base, unexpected revision resolution or errors are possible. Residual risk is low given the current suffix concatenation."
+    severity: low
+    stride: T
+    cwe: CWE-88
+    suggested_mitigations: [validate_git_ref]
+
+  mitigation_reference_path_escape:
+    name: "Mitigation reference path escapes repo root during lint"
+    description: "In src/commands/lint.py:131, the reference-resolution check evaluates (repo_root / ref['file']).exists() without confining the path. Because pathlib resolves an absolute right-hand side to itself and does not collapse '..', a mitigations.yaml reference with an absolute path or '../' sequences is checked outside repo_root. The lint output ('file not found' vs silent) then acts as an existence oracle for arbitrary filesystem paths. An insider editing mitigations.yaml could probe for the presence of files outside the project."
+    severity: low
+    stride: I
+    cwe: CWE-22
+    suggested_mitigations: [confine_reference_paths]

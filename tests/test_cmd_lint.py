@@ -457,3 +457,87 @@ class TestCmdLintReferenceResolution:
         result = cmd_lint(args)
         assert result == 0
         assert "file not found" not in capsys.readouterr().out
+
+
+class TestCmdLintFlowBoundThreats:
+    """The object form of a feature threat mapping, with a 'flows' binding."""
+
+    def _features(self, threats_block):
+        return (
+            "features:\n"
+            "  - name: User Login\n"
+            "    goal: Authenticate users\n"
+            "    data_flows: [df_user_to_web, df_web_to_api]\n"
+            "    threat_actors: [external_attacker]\n"
+            "    threats:\n" + threats_block +
+            '    last_updated: "2025-01-01"\n'
+        )
+
+    def _lint(self, tmp_path, capsys, threats_block):
+        model_dir = tmp_path / ".tmdd"
+        _write_model(model_dir, overrides={"features.yaml": self._features(threats_block)})
+        code = cmd_lint(make_args(path=str(model_dir)))
+        return code, capsys.readouterr().out
+
+    def test_valid_flow_binding_passes(self, tmp_path, capsys):
+        code, out = self._lint(tmp_path, capsys,
+            "      sql_injection:\n"
+            "        mitigations: [parameterized_queries]\n"
+            "        flows: [df_web_to_api]\n")
+        assert code == 0, out
+
+    def test_unknown_flow_is_error(self, tmp_path, capsys):
+        code, out = self._lint(tmp_path, capsys,
+            "      sql_injection:\n"
+            "        mitigations: default\n"
+            "        flows: [df_does_not_exist]\n")
+        assert code == 1
+        assert "unknown data_flow 'df_does_not_exist'" in out
+
+    def test_flow_not_declared_by_feature_is_error(self, tmp_path, capsys):
+        """A binding the feature never declares can never match -> dead mapping."""
+        code, out = self._lint(tmp_path, capsys,
+            "      sql_injection:\n"
+            "        mitigations: default\n"
+            "        flows: [df_api_to_db]\n")
+        assert code == 1
+        assert "not declared by" in out
+
+    def test_empty_flows_list_is_error(self, tmp_path, capsys):
+        code, out = self._lint(tmp_path, capsys,
+            "      sql_injection:\n"
+            "        mitigations: default\n"
+            "        flows: []\n")
+        assert code == 1
+        assert "empty 'flows' list" in out
+
+    def test_accepted_in_object_form_still_needs_reviewed_by(self, tmp_path, capsys):
+        code, out = self._lint(tmp_path, capsys,
+            "      brute_force:\n"
+            "        mitigations: accepted\n"
+            "        flows: [df_web_to_api]\n")
+        assert code == 0
+        assert "accepted threats but no reviewed_by" in out
+
+    def test_valid_status_passes(self, tmp_path, capsys):
+        code, out = self._lint(tmp_path, capsys,
+            "      sql_injection:\n"
+            "        mitigations: default\n"
+            "        status: implemented\n")
+        assert code == 0, out
+
+    def test_invalid_status_is_error(self, tmp_path, capsys):
+        code, out = self._lint(tmp_path, capsys,
+            "      sql_injection:\n"
+            "        mitigations: default\n"
+            "        status: done\n")
+        assert code == 1
+        assert "invalid status 'done'" in out
+
+    def test_implemented_and_accepted_is_contradiction(self, tmp_path, capsys):
+        code, out = self._lint(tmp_path, capsys,
+            "      sql_injection:\n"
+            "        mitigations: accepted\n"
+            "        status: implemented\n")
+        assert code == 1
+        assert "cannot be both implemented and accepted" in out

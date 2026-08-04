@@ -1,7 +1,11 @@
 """Generate secure coding prompts for AI agents."""
 from pathlib import Path
 
-from ..utils import get_mitigation_desc, get_mitigation_refs
+from ..utils import (
+    get_mitigation_desc,
+    get_mitigation_refs,
+    normalize_feature_threat,
+)
 
 
 def generate_agent_prompt(tm, output_path, feature_name=None):
@@ -71,7 +75,8 @@ def generate_agent_prompt(tm, output_path, feature_name=None):
 
                 # Dict mapping threat IDs -> mitigations
                 elif isinstance(feat_threats, dict):
-                    for tid, mits in feat_threats.items():
+                    for tid, raw in feat_threats.items():
+                        mits = normalize_feature_threat(raw).mitigations
                         threat_info = threats.get(tid, {})
                         threat_label = threat_info.get("name", tid) if isinstance(threat_info, dict) else tid
                         lines.append(f"\n[!] {threat_label}")

@@ -7,7 +7,12 @@ from html import escape
 from pathlib import Path
 
 from src import load_threat_model, safe_name
-from src.utils import get_output_dir, resolve_model_dir, TMDDError
+from src.utils import (
+    get_output_dir,
+    resolve_model_dir,
+    normalize_feature_threat,
+    TMDDError,
+)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -136,7 +141,8 @@ def _build_cytoscape_elements(threat_model):
         feat_threats_raw = feat.get("threats", {})
         resolved_threats = []
         if isinstance(feat_threats_raw, dict):
-            for tid, mids in feat_threats_raw.items():
+            for tid, _raw in feat_threats_raw.items():
+                mids = normalize_feature_threat(_raw).mitigations
                 tinfo = threats_catalog.get(tid, {})
                 if not isinstance(tinfo, dict):
                     tinfo = {}
@@ -502,7 +508,8 @@ def _build_features_html(features, threats, mitigations):
 
         # Dict mapping threat IDs -> mitigations (full mapping)
         elif isinstance(feature_threats, dict):
-            for tid, mids in feature_threats.items():
+            for tid, _raw in feature_threats.items():
+                mids = normalize_feature_threat(_raw).mitigations
                 threat_info = threats.get(tid, {})
                 if not isinstance(threat_info, dict):
                     threat_info = {}

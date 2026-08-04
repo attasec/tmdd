@@ -20,6 +20,7 @@ from ..utils import (
     resolve_model_dir,
     path_matches_any,
     get_mitigation_desc,
+    normalize_feature_threat,
     TMDDError,
 )
 
@@ -68,8 +69,13 @@ def changed_files_from_git(repo_root, base=None, staged=False):
 # ---------------------------------------------------------------------------
 
 
-def _resolve_feature_threats(feature, threats_catalog, mitigations):
-    """Resolve a feature's threat->mitigation mapping into display-ready entries."""
+def _resolve_feature_threats(feature, threats_catalog, mitigations, affected_flows):
+    """Resolve a feature's threat->mitigation mapping into display-ready entries.
+
+    A threat that names its own *flows* is only surfaced when the diff actually
+    touched one of them. Threats with no flow binding apply to the whole
+    feature and are always surfaced, which is the pre-existing behaviour.
+    """
     resolved = []
     feature_threats = feature.get("threats", {})
     if isinstance(feature_threats, dict):
@@ -79,7 +85,11 @@ def _resolve_feature_threats(feature, threats_catalog, mitigations):
     else:
         items = []
 
-    for tid, mits in items:
+    for tid, raw in items:
+        mapping = normalize_feature_threat(raw)
+        mits, threat_flows = mapping.mitigations, mapping.flows
+        if threat_flows is not None and not (set(threat_flows) & affected_flows):
+            continue
         info = threats_catalog.get(tid, {})
         info = info if isinstance(info, dict) else {}
         entry = {
@@ -88,7 +98,10 @@ def _resolve_feature_threats(feature, threats_catalog, mitigations):
             "severity": info.get("severity"),
             "stride": info.get("stride"),
             "cwe": info.get("cwe"),
-            "status": "required",
+            # 'implemented' survives to the output on purpose: the threat only
+            # got this far because the diff touched a flow it lives on, so a
+            # shipped control here is a re-verify prompt, not a silent pass.
+            "status": mapping.status,
             "mitigations": [],
         }
         if mits == "accepted":
@@ -165,7 +178,7 @@ def map_changed_files(tm, changed_files):
                     "reviewed_at": feat.get("reviewed_at"),
                     "last_updated": feat.get("last_updated"),
                     "threats": _resolve_feature_threats(
-                        feat, threats_catalog, mitigations
+                        feat, threats_catalog, mitigations, affected_flow_set
                     ),
                 }
             )
@@ -227,49 +240,77 @@ def _sev(t):
     return f"[{s}{'/' + st if st else ''}]"
 
 
+def _status_tag(t):
+    """Suffix marking a threat's control lifecycle, empty for ordinary open work."""
+    if t["status"] == "accepted":
+        return " ACCEPTED"
+    if t["status"] == "implemented":
+        return " IMPLEMENTED - re-verify"
+    return ""
+
+
+def _file_component_pairs(result):
+    """Yield (file, components) in diff order; components is [] when unmapped."""
+    mapping = {m["file"]: m["components"] for m in result["file_component_map"]}
+    for path in result["changed_files"]:
+        yield path, mapping.get(path, [])
+
+
 def format_text(result):
     lines = []
     n_files = len(result["changed_files"])
     lines.append(f"Threat review: {n_files} changed file(s)\n" + "=" * 60)
 
+    if result["changed_files"]:
+        lines.append("\nChanged files  (what you touched):")
+        width = min(max(len(f) for f in result["changed_files"]), 56)
+        for path, hits in _file_component_pairs(result):
+            marker = "  " if hits else "? "
+            target = ", ".join(hits) if hits else "no component matched"
+            lines.append(f"  {marker}{path.ljust(width)}  -> {target}")
+
     if result["affected_components"]:
-        lines.append("\nAffected components:")
+        lines.append("\nAffected components  (what those files map to):")
         for c in result["affected_components"]:
             lines.append(f"  - {c['id']} ({c['type']})")
     else:
         lines.append("\nNo modeled components touched by these changes.")
 
     if result["affected_features"]:
-        lines.append("\nAffected features:")
+        lines.append("\nAffected features  (what that reaches):")
         for f in result["affected_features"]:
             lines.append(f"  - {f['name']}")
 
     if result["affected_threats"]:
-        lines.append("\nThreats to review:")
+        lines.append("\nThreats to review  (what to check):")
         for t in result["affected_threats"]:
-            tag = " ACCEPTED" if t["status"] == "accepted" else ""
-            lines.append(f"\n  {_sev(t)} {t['name']} ({t['id']}){tag}")
+            lines.append(f"\n  {_sev(t)} {t['name']} ({t['id']}){_status_tag(t)}")
             lines.append(f"      via feature(s): {', '.join(t['features'])}")
             if t["status"] == "accepted":
                 lines.append("      - risk accepted")
             elif t["mitigations"]:
+                box = "[x]" if t["status"] == "implemented" else "[ ]"
                 for m in t["mitigations"]:
-                    lines.append(f"      - [ ] {m}")
+                    lines.append(f"      - {box} {m}")
             else:
                 lines.append("      - no mitigations mapped")
     else:
         lines.append("\nNo modeled threats affected.")
 
-    # coverage gaps
+    # coverage gaps - the files themselves are already listed and marked '?'
+    # above, so only summarise here rather than repeating every path.
+    gaps = []
     if result["unmapped_files"]:
-        lines.append("\nUnmapped changed files (no component source_paths matched):")
-        for f in result["unmapped_files"]:
-            lines.append(f"  ? {f}")
+        n = len(result["unmapped_files"])
+        gaps.append(f"  {n} changed file(s) matched no component (marked ? above)")
     if result["components_without_source_paths"]:
-        lines.append(
-            "\nComponents with no source_paths (invisible to diff mapping): "
+        gaps.append(
+            "  components with no source_paths (invisible to diff mapping): "
             + ", ".join(result["components_without_source_paths"])
         )
+    if gaps:
+        lines.append("\nCoverage gaps  (what the model cannot see):")
+        lines.extend(gaps)
     return "\n".join(lines)
 
 
@@ -282,22 +323,28 @@ def format_markdown(result):
     ]
 
     if result["affected_threats"]:
-        lines.append("### Threats to review")
+        lines.append("### Threats to review — what to check")
         lines.append("")
-        lines.append("| Severity | STRIDE | Threat | Feature(s) | Required controls |")
-        lines.append("|---|---|---|---|---|")
+        lines.append(
+            "| Severity | STRIDE | Threat | Status | Feature(s) | Required controls |"
+        )
+        lines.append("|---|---|---|---|---|---|")
         for t in result["affected_threats"]:
             sev = (t.get("severity") or "?").upper()
             stride = t.get("stride") or ""
             feats = ", ".join(t["features"])
             if t["status"] == "accepted":
-                controls = "_risk accepted_"
+                status, controls = "risk accepted", "_risk accepted_"
             elif t["mitigations"]:
-                controls = "<br>".join(f"- [ ] {m}" for m in t["mitigations"])
+                implemented = t["status"] == "implemented"
+                status = "**re-verify**" if implemented else "open"
+                box = "[x]" if implemented else "[ ]"
+                controls = "<br>".join(f"- {box} {m}" for m in t["mitigations"])
             else:
-                controls = "_no mitigations mapped_"
+                status, controls = "open", "_no mitigations mapped_"
             lines.append(
-                f"| {sev} | {stride} | {t['name']} (`{t['id']}`) | {feats} | {controls} |"
+                f"| {sev} | {stride} | {t['name']} (`{t['id']}`) "
+                f"| {status} | {feats} | {controls} |"
             )
         lines.append("")
     else:
@@ -305,20 +352,30 @@ def format_markdown(result):
 
     if result["affected_components"]:
         ids = ", ".join(f"`{c['id']}`" for c in result["affected_components"])
-        lines.append(f"**Affected components:** {ids}")
+        lines.append(f"**Affected components** (what those files map to): {ids}")
+        lines.append("")
+
+    if result["changed_files"]:
+        lines.append("### Changed files — what you touched")
+        lines.append("")
+        for path, hits in _file_component_pairs(result):
+            target = (
+                ", ".join(f"`{h}`" for h in hits) if hits else "_no component matched_"
+            )
+            lines.append(f"- `{path}` -> {target}")
         lines.append("")
 
     gaps = []
     if result["unmapped_files"]:
-        gaps.append("**Unmapped changed files** (no component `source_paths` matched):")
-        gaps.extend(f"- `{f}`" for f in result["unmapped_files"])
+        n = len(result["unmapped_files"])
+        gaps.append(f"- {n} changed file(s) matched no component `source_paths`")
     if result["components_without_source_paths"]:
         ids = ", ".join(f"`{c}`" for c in result["components_without_source_paths"])
         gaps.append(
-            f"**Components with no `source_paths`** (invisible to diff mapping): {ids}"
+            f"- components with no `source_paths` (invisible to diff mapping): {ids}"
         )
     if gaps:
-        lines.append("### Coverage gaps")
+        lines.append("### Coverage gaps — what the model cannot see")
         lines.append("")
         lines.extend(gaps)
     return "\n".join(lines)

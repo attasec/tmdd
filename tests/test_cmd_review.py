@@ -1,5 +1,6 @@
 """Tests for src/commands/review.py."""
 
+import copy
 import json
 import subprocess
 
@@ -142,6 +143,26 @@ class TestFormatters:
         assert "README.md" in out
         assert "ACCEPTED" in out
 
+    def test_text_lists_changed_files_with_components(self):
+        result = map_changed_files(TM, ["src/api/routes.py", "README.md"])
+        out = format_text(result)
+        assert "Changed files" in out
+        # mapped file shows the component it resolved to
+        assert "src/api/routes.py" in out
+        assert "-> api" in out
+        # unmapped file is marked and explained inline
+        assert "? README.md" in out
+        assert "no component matched" in out
+        # paths are listed once, not repeated in a trailing gap section
+        assert out.count("README.md") == 1
+
+    def test_markdown_lists_changed_files(self):
+        result = map_changed_files(TM, ["src/api/routes.py", "README.md"])
+        out = format_markdown(result)
+        assert "### Changed files" in out
+        assert "`src/api/routes.py`" in out
+        assert "_no component matched_" in out
+
     def test_markdown_is_a_table(self):
         result = map_changed_files(TM, ["src/api/routes.py"])
         out = format_markdown(result)
@@ -238,3 +259,121 @@ class TestGitIntegration:
     def test_bad_ref_raises_tmdd_error(self, git_repo):
         with pytest.raises(TMDDError):
             changed_files_from_git(git_repo, base="no-such-ref")
+
+
+class TestFlowBoundThreats:
+    """Threats that name their own flows surface only when those flows change."""
+
+    def _model(self):
+        tm = copy.deepcopy(TM)
+        tm["features"][0]["threats"] = {
+            # reachable from either component
+            "sql_injection": {"mitigations": "default", "flows": ["df_web_to_api"]},
+            # only on the api->db leg, which src/web/** does not touch
+            "brute_force": {"mitigations": "accepted", "flows": ["df_api_to_db"]},
+        }
+        return tm
+
+    def test_threat_hidden_when_its_flow_untouched(self):
+        result = map_changed_files(self._model(), ["src/web/app.js"])
+        ids = [t["id"] for t in result["affected_threats"]]
+        assert ids == ["sql_injection"]
+
+    def test_threat_shown_when_its_flow_touched(self):
+        # src/api/** sits on both flows
+        result = map_changed_files(self._model(), ["src/api/routes.py"])
+        ids = sorted(t["id"] for t in result["affected_threats"])
+        assert ids == ["brute_force", "sql_injection"]
+
+    def test_binding_preserves_mitigation_resolution(self):
+        result = map_changed_files(self._model(), ["src/api/routes.py"])
+        sqli = next(t for t in result["affected_threats"] if t["id"] == "sql_injection")
+        assert sqli["mitigations"] == ["Use parameterized queries"]
+        bf = next(t for t in result["affected_threats"] if t["id"] == "brute_force")
+        assert bf["status"] == "accepted"
+
+    def test_unbound_threats_keep_previous_behaviour(self):
+        # TM uses the scalar form throughout -> no filtering
+        result = map_changed_files(TM, ["src/web/app.js"])
+        ids = sorted(t["id"] for t in result["affected_threats"])
+        assert ids == ["brute_force", "sql_injection"]
+
+
+class TestImplementedStatus:
+    """A shipped control reads as re-verify, not as outstanding work."""
+
+    def _model(self, status):
+        tm = copy.deepcopy(TM)
+        tm["features"][0]["threats"] = {
+            "sql_injection": {"mitigations": "default", "status": status},
+        }
+        return tm
+
+    def _sqli(self, status):
+        result = map_changed_files(self._model(status), ["src/api/routes.py"])
+        return next(t for t in result["affected_threats"] if t["id"] == "sql_injection")
+
+    def test_implemented_status_reaches_output(self):
+        assert self._sqli("implemented")["status"] == "implemented"
+
+    def test_implemented_still_lists_its_mitigations(self):
+        # the control is shipped, but reviewers still need to know what it is
+        assert self._sqli("implemented")["mitigations"] == ["Use parameterized queries"]
+
+    def test_default_is_required(self):
+        assert self._sqli("required")["status"] == "required"
+
+    def test_omitted_status_defaults_to_required(self):
+        tm = copy.deepcopy(TM)
+        tm["features"][0]["threats"] = {"sql_injection": {"mitigations": "default"}}
+        result = map_changed_files(tm, ["src/api/routes.py"])
+        assert result["affected_threats"][0]["status"] == "required"
+
+    def test_unknown_status_fails_safe_to_required(self):
+        # a typo must not silently hide outstanding work
+        assert self._sqli("done")["status"] == "required"
+
+    def test_text_marks_implemented_for_reverify(self):
+        result = map_changed_files(self._model("implemented"), ["src/api/routes.py"])
+        out = format_text(result)
+        assert "IMPLEMENTED - re-verify" in out
+        assert "- [x] Use parameterized queries" in out
+        assert "- [ ]" not in out
+
+    def test_text_keeps_empty_box_when_required(self):
+        result = map_changed_files(self._model("required"), ["src/api/routes.py"])
+        out = format_text(result)
+        assert "- [ ] Use parameterized queries" in out
+        assert "IMPLEMENTED" not in out
+
+    def test_markdown_status_column(self):
+        out = format_markdown(
+            map_changed_files(self._model("implemented"), ["src/api/routes.py"])
+        )
+        assert "| Status |" in out
+        assert "**re-verify**" in out
+        assert "- [x] Use parameterized queries" in out
+
+    def test_accepted_beats_implemented_and_is_not_reverify(self):
+        tm = copy.deepcopy(TM)
+        tm["features"][0]["threats"] = {"sql_injection": {"mitigations": "accepted"}}
+        result = map_changed_files(tm, ["src/api/routes.py"])
+        t = result["affected_threats"][0]
+        assert t["status"] == "accepted"
+        assert "ACCEPTED" in format_text(result)
+        assert "re-verify" not in format_text(result)
+
+    def test_status_composes_with_flow_binding(self):
+        tm = copy.deepcopy(TM)
+        tm["features"][0]["threats"] = {
+            "sql_injection": {
+                "mitigations": "default",
+                "status": "implemented",
+                "flows": ["df_api_to_db"],
+            },
+        }
+        # web-only change does not touch df_api_to_db -> nothing to re-verify
+        assert map_changed_files(tm, ["src/web/app.js"])["affected_threats"] == []
+        # api change does -> surfaces as re-verify
+        t = map_changed_files(tm, ["src/api/routes.py"])["affected_threats"][0]
+        assert t["status"] == "implemented"

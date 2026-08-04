@@ -3,6 +3,7 @@
 import logging
 import re
 import sys
+from collections import namedtuple
 from pathlib import Path
 
 try:
@@ -140,6 +141,61 @@ def path_matches_any(path, patterns):
 # ---------------------------------------------------------------------------
 # YAML loading
 # ---------------------------------------------------------------------------
+
+
+#: A threat mapping normalized into its three independent dimensions. Kept as
+#: a NamedTuple so call sites read by attribute and new dimensions can be added
+#: without breaking the ones that only care about mitigations.
+FeatureThreat = namedtuple("FeatureThreat", "mitigations flows status")
+
+#: Lifecycle of a control, distinct from *which* mitigations apply.
+STATUS_REQUIRED = "required"  # not done, or nothing recorded (the default)
+STATUS_IMPLEMENTED = "implemented"  # shipped; changes on its flows need re-checking
+STATUS_ACCEPTED = "accepted"  # deliberately not fixed
+FEATURE_THREAT_STATUSES = {STATUS_REQUIRED, STATUS_IMPLEMENTED, STATUS_ACCEPTED}
+
+
+def normalize_feature_threat(value):
+    """Normalize a features.yaml threat mapping value into a FeatureThreat.
+
+    A feature maps threat IDs to how they are handled. Supported forms:
+
+        threat_id: default                  # inherit suggested_mitigations
+        threat_id: accepted                 # risk accepted
+        threat_id: [mit_a, mit_b]           # explicit mitigation IDs
+        threat_id:                          # object form
+          mitigations: default
+          flows: [df_cdn_to_browser]        # data flows the threat lives on
+          status: implemented               # control is shipped
+
+    The object form carries two things the scalar form cannot express. *flows*
+    binds a threat to the data flows it actually lives on, so `tmdd review`
+    stops surfacing it whenever any unrelated flow of the same feature moves.
+    *status* records whether the control is shipped, which is what separates
+    "you still owe this" from "you changed code a shipped control depends on".
+
+    Returns FeatureThreat(mitigations, flows, status):
+      - *flows* is None when unbound, meaning "applies to the whole feature".
+      - *status* is always one of FEATURE_THREAT_STATUSES; an unrecognised
+        value normalizes to STATUS_REQUIRED so a typo fails safe (loud in
+        lint, and shown as outstanding work rather than silently dropped).
+    """
+    if not isinstance(value, dict):
+        status = STATUS_ACCEPTED if value == "accepted" else STATUS_REQUIRED
+        return FeatureThreat(value, None, status)
+
+    flows = value.get("flows")
+    if not isinstance(flows, list):
+        flows = None
+
+    mitigations = value.get("mitigations")
+    raw_status = value.get("status")
+    # 'accepted' predates this field and was expressible two ways, as the
+    # mitigations value or as a bare status. Both still mean the same thing.
+    if raw_status == STATUS_ACCEPTED or mitigations == "accepted":
+        return FeatureThreat("accepted", flows, STATUS_ACCEPTED)
+    status = raw_status if raw_status in FEATURE_THREAT_STATUSES else STATUS_REQUIRED
+    return FeatureThreat(mitigations, flows, status)
 
 
 def get_mitigation_desc(entry, fallback=""):

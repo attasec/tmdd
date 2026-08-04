@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TMDD CLI - Threat Model Diagram</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #f8f9fa; }
+.toolbar {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 1rem; background: #fff;
+  border-bottom: 1px solid #ddd; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.toolbar h1 { font-size: 1rem; color: #333; margin-right: auto; }
+.toolbar button {
+  padding: 0.3rem 0.75rem; border: 1px solid #ccc; background: #fff;
+  cursor: pointer; font-size: 0.85rem; border-radius: 3px;
+  transition: background 0.15s;
+}
+.toolbar button:hover { background: #e9e9e9; }
+.hint { font-size: 0.75rem; color: #999; margin-left: 0.5rem; }
+#cy { width: 100%; height: calc(100vh - 44px); background: #fafbfc; }
+#cy-wrapper { position: relative; }
+#diagram-legend {
+  position: absolute; bottom: 12px; left: 12px;
+  background: rgba(255,255,255,0.94); border: 1px solid #ddd;
+  border-radius: 5px; padding: 0.5rem 0.75rem;
+  font-size: 0.8rem; max-height: 240px; overflow-y: auto;
+  z-index: 5; box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+}
+.legend-title {
+  font-weight: bold; margin-bottom: 0.3rem; font-size: 0.7rem;
+  color: #555; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.legend-item { display: flex; align-items: center; gap: 0.4rem; padding: 0.12rem 0; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+#node-info {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(255,255,255,0.95); border: 1px solid #ddd;
+  border-radius: 5px; padding: 0.6rem 0.85rem;
+  font-size: 0.85rem; max-width: 320px; z-index: 5;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  display: none; line-height: 1.45;
+}
+#node-info strong { display: block; margin-bottom: 0.2rem; }
+.info-label { color: #888; font-size: 0.8em; }
+.legend-item { cursor: pointer; padding: 0.2rem 0.35rem; border-radius: 3px; transition: background 0.15s; }
+.legend-item:hover { background: rgba(0,0,0,0.06); }
+.legend-item.active { background: rgba(0,0,0,0.1); font-weight: bold; }
+#feature-panel {
+  position: absolute; top: 12px; right: 12px; width: 360px;
+  max-height: calc(100% - 24px); overflow-y: auto;
+  background: rgba(255,255,255,0.97); border: 1px solid #ddd;
+  border-radius: 5px; padding: 0; z-index: 10;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15); display: none;
+  font-size: 0.83rem; line-height: 1.45;
+}
+#feature-panel .fp-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 0.75rem; border-bottom: 1px solid #eee; background: #f8f9fa; border-radius: 5px 5px 0 0; }
+#feature-panel .fp-header .fp-dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+#feature-panel .fp-header strong { flex: 1; font-size: 0.9rem; }
+#feature-panel .fp-close { border: none; background: none; cursor: pointer; font-size: 1.1rem; color: #999; padding: 0 0.2rem; }
+#feature-panel .fp-close:hover { color: #333; }
+#feature-panel .fp-body { padding: 0.6rem 0.75rem; }
+#feature-panel .fp-goal { color: #555; margin-bottom: 0.5rem; font-style: italic; }
+#feature-panel .fp-section { margin-bottom: 0.5rem; }
+#feature-panel .fp-section-title { font-weight: bold; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.4px; color: #888; margin-bottom: 0.25rem; }
+.fp-threat { padding: 0.4rem 0.5rem; margin-bottom: 0.35rem; background: #f8f9fa; border-left: 3px solid #ccc; border-radius: 0 3px 3px 0; }
+.fp-threat-head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; flex-wrap: wrap; }
+.fp-threat-head code { font-weight: bold; }
+.fp-threat-head .sev { display: inline-block; padding: 0.05rem 0.35rem; font-size: 0.7rem; font-weight: bold; color: #fff; border-radius: 2px; }
+.fp-threat-head .stride-tag { display: inline-block; padding: 0.05rem 0.3rem; font-size: 0.7rem; font-weight: bold; color: #fff; border-radius: 2px; }
+.fp-threat .fp-mit { padding-left: 0.75rem; color: #555; font-size: 0.8rem; }
+.fp-threat .fp-mit code { font-size: 0.78rem; color: #333; margin-right: 0.2rem; }
+.fp-threat .fp-mode { font-size: 0.75rem; color: #999; font-style: italic; }
+.fp-flows { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.fp-flows code { font-size: 0.78rem; background: #eef; padding: 0.1rem 0.3rem; border-radius: 2px; }
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <h1>TMDD CLI</h1>
+  <button onclick="_cyFit()" title="Fit to screen">Fit</button>
+  <button onclick="_cyZoomIn()" title="Zoom in">+</button>
+  <button onclick="_cyZoomOut()" title="Zoom out">&minus;</button>
+  <button onclick="_cyReset()" title="Re-run layout">Reset</button>
+  <span class="hint">Scroll to zoom &middot; Drag to pan &middot; Click nodes for details</span>
+</div>
+<div id="cy-wrapper">
+  <div id="cy"></div>
+  <div id="diagram-legend"></div>
+  <div id="node-info"></div>
+  <div id="feature-panel"></div>
+</div>
+<script id="diagram-data" type="application/json">{"nodes": [{"data": {"id": "_grp_actors", "label": "Actors", "nodeType": "boundary", "borderColor": "#95a5a6"}}, {"data": {"id": "developer", "label": "Developer", "nodeType": "actor", "parent": "_grp_actors", "description": "Developer or security engineer who runs TMDD CLI commands (init, lint, feature, compile) and edits .tmdd/ YAML files"}}, {"data": {"id": "ai_agent", "label": "Ai Agent", "nodeType": "actor", "parent": "_grp_actors", "description": "AI coding agent that consumes generated prompt files (.tmdd/out/*.prompt.txt, *.threatmodel.txt) to produce threat models or secure code"}}, {"data": {"id": "report_viewer", "label": "Report Viewer", "nodeType": "actor", "parent": "_grp_actors", "description": "Person viewing generated HTML reports and diagrams in a web browser, potentially including non-developers or stakeholders"}}, {"data": {"id": "_grp_internal", "label": "Trust: internal", "nodeType": "boundary", "borderColor": "#3498db"}}, {"data": {"id": "cli_core", "label": "cli_core", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "Argparse-based CLI entry point that parses user commands and dispatches to command handlers (src/cli.py, src/__main__.py)", "technology": "Python / argparse", "sourcePaths": ["src/cli.py", "src/__main__.py", "src/commands/__init__.py", "tests/test_cli.py"]}}, {"data": {"id": "init_engine", "label": "init_engine", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "init command handler: scaffolds a new .tmdd/ project from a bundled template, substituting the user-provided name and description (src/commands/init.py)", "technology": "Python", "sourcePaths": ["src/commands/init.py", "tests/test_cmd_init.py"]}}, {"data": {"id": "lint_engine", "label": "lint_engine", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "lint command handler: structural validation and cross-reference integrity checks over the loaded threat model, including mitigation reference resolution (src/commands/lint.py)", "technology": "Python", "sourcePaths": ["src/commands/lint.py", "tests/test_cmd_lint.py"]}}, {"data": {"id": "feature_engine", "label": "feature_engine", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "feature command handler: drives the threat-model-first feature workflow and requests prompt generation (src/commands/feature.py)", "technology": "Python", "sourcePaths": ["src/commands/feature.py", "tests/test_cmd_feature.py"]}}, {"data": {"id": "compile_engine", "label": "compile_engine", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "compile command handler: assembles the consolidated .tm.yaml and the secure-coding agent prompt from the full model (src/commands/compile.py)", "technology": "Python", "sourcePaths": ["src/commands/compile.py", "tests/test_cmd_compile.py"]}}, {"data": {"id": "review_engine", "label": "review_engine", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "review command handler: maps a code diff to affected threats by matching changed files against component source_paths, and shells out to git for the changed file list (src/commands/review.py)", "technology": "Python / subprocess", "sourcePaths": ["src/commands/review.py", "tests/test_cmd_review.py"]}}, {"data": {"id": "yaml_processor", "label": "yaml_processor", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "Shared model-loading and path utilities: yaml.safe_load(), threat model assembly, and the glob-to-regex matching used by review (src/utils.py)", "technology": "Python / PyYAML (safe_load)", "sourcePaths": ["src/utils.py", "tests/test_utils.py"]}}, {"data": {"id": "prompt_generator", "label": "prompt_generator", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "Generates AI prompt text files for threat modeling and secure coding workflows (src/generators/threat_prompt.py, agent_prompt.py)", "technology": "Python", "sourcePaths": ["src/generators/**", "tests/test_generators.py"]}}, {"data": {"id": "template_store", "label": "template_store", "nodeType": "other", "parent": "_grp_internal", "bgColor": "#bdc3c7", "shape": "rectangle", "description": "Bundled YAML template files (minimal, web-app, api) used by init command for project scaffolding (src/templates/)", "technology": "YAML files", "sourcePaths": ["src/templates/**"]}}, {"data": {"id": "html_renderer", "label": "html_renderer", "nodeType": "service", "parent": "_grp_internal", "bgColor": "#27ae60", "shape": "round-rectangle", "description": "Generates interactive HTML reports and architecture diagrams with embedded Cytoscape.js (report.py, diagram.py)", "technology": "Python / HTML / JavaScript", "sourcePaths": ["report.py", "diagram.py", "report_md.py"]}}, {"data": {"id": "threat_model_store", "label": "threat_model_store", "nodeType": "other", "parent": "_grp_internal", "bgColor": "#bdc3c7", "shape": "rectangle", "description": "The authored .tmdd/ YAML threat model itself - the input every command parses, and the injection vector behind prompt_injection, glob_redos and the stored-XSS threats. Excludes generated artifacts under .tmdd/out/", "technology": "YAML files on local filesystem", "sourcePaths": [".tmdd/*.yaml", ".tmdd/threats/*.yaml"]}}, {"data": {"id": "filesystem_store", "label": "filesystem_store", "nodeType": "other", "parent": "_grp_internal", "bgColor": "#bdc3c7", "shape": "rectangle", "description": "Generated artifacts written by TMDD: consolidated .tm.yaml, prompt text files, HTML reports and diagrams (.tmdd/out/)", "technology": "Local filesystem", "sourcePaths": []}}, {"data": {"id": "_grp_external", "label": "Trust: external", "nodeType": "boundary", "borderColor": "#9b59b6"}}, {"data": {"id": "cdn_libraries", "label": "cdn_libraries", "nodeType": "external", "parent": "_grp_external", "bgColor": "#95a5a6", "shape": "diamond", "description": "External CDN (unpkg.com) serving Cytoscape.js 3.30.4, dagre 0.8.5, and cytoscape-dagre 2.5.0 loaded client-side in generated HTML", "technology": "unpkg.com CDN / JavaScript", "sourcePaths": []}}, {"data": {"id": "git_cli", "label": "git_cli", "nodeType": "external", "parent": "_grp_external", "bgColor": "#95a5a6", "shape": "diamond", "description": "External git executable invoked as a subprocess by the review command to list changed files (git diff --name-only). Not bundled with TMDD; resolved from PATH", "technology": "git (external process via subprocess.run)", "sourcePaths": []}}], "edges": [{"data": {"id": "e_df_developer_to_cli", "source": "developer", "target": "cli_core", "label": "stdin", "edgeColor": "#e74c3c", "flowId": "df_developer_to_cli", "features": ["Project Initialization", "Threat Model Validation", "Feature Workflow", "Diff-to-Threat Review", "Compilation"], "description": "CLI commands with arguments (path, feature name, description, template name, --base ref)"}}, {"data": {"id": "e_df_cli_to_init", "source": "cli_core", "target": "init_engine", "label": "function_call", "edgeColor": "#e74c3c", "flowId": "df_cli_to_init", "features": ["Project Initialization"], "description": "Parsed argparse Namespace for init: target path, system name, description, template name"}}, {"data": {"id": "e_df_cli_to_lint", "source": "cli_core", "target": "lint_engine", "label": "function_call", "edgeColor": "#3498db", "flowId": "df_cli_to_lint", "features": ["Threat Model Validation"], "description": "Parsed argparse Namespace for lint: path to the .tmdd directory"}}, {"data": {"id": "e_df_cli_to_feature", "source": "cli_core", "target": "feature_engine", "label": "function_call", "edgeColor": "#2ecc71", "flowId": "df_cli_to_feature", "features": ["Feature Workflow"], "description": "Parsed argparse Namespace for feature: feature name, description, model path"}}, {"data": {"id": "e_df_cli_to_compile", "source": "cli_core", "target": "compile_engine", "label": "function_call", "edgeColor": "#f39c12", "flowId": "df_cli_to_compile", "features": ["Compilation"], "description": "Parsed argparse Namespace for compile: model path, optional feature filter"}}, {"data": {"id": "e_df_cli_to_review", "source": "cli_core", "target": "review_engine", "label": "function_call", "edgeColor": "#9b59b6", "flowId": "df_cli_to_review", "features": ["Diff-to-Threat Review"], "description": "Parsed argparse Namespace for review: model path, --base ref, --staged, --files, --repo-root, output format"}}, {"data": {"id": "e_df_lint_to_yaml", "source": "lint_engine", "target": "yaml_processor", "label": "function_call", "edgeColor": "#3498db", "flowId": "df_lint_to_yaml", "features": ["Threat Model Validation"], "description": "File paths to load; returns parsed YAML dicts for structural and cross-reference validation"}}, {"data": {"id": "e_df_feature_to_yaml", "source": "feature_engine", "target": "yaml_processor", "label": "function_call", "edgeColor": "#2ecc71", "flowId": "df_feature_to_yaml", "features": ["Feature Workflow"], "description": "File paths to load; returns the parsed threat model used to build feature prompts"}}, {"data": {"id": "e_df_compile_to_yaml", "source": "compile_engine", "target": "yaml_processor", "label": "function_call", "edgeColor": "#f39c12", "flowId": "df_compile_to_yaml", "features": ["Compilation"], "description": "File paths to load; returns the full parsed model for consolidation into .tm.yaml"}}, {"data": {"id": "e_df_review_to_yaml", "source": "review_engine", "target": "yaml_processor", "label": "function_call", "edgeColor": "#9b59b6", "flowId": "df_review_to_yaml", "features": ["Diff-to-Threat Review"], "description": "File paths to load, plus component source_paths globs translated to regexes for changed-file matching"}}, {"data": {"id": "e_df_html_to_yaml", "source": "html_renderer", "target": "yaml_processor", "label": "function_call", "edgeColor": "#1abc9c", "flowId": "df_html_to_yaml", "features": ["Report Generation", "Diagram Generation"], "description": "File paths to load; returns the parsed model rendered into HTML report and diagram output"}}, {"data": {"id": "e_df_yaml_to_model", "source": "yaml_processor", "target": "threat_model_store", "label": "filesystem", "edgeColor": "#3498db", "flowId": "df_yaml_to_model", "features": ["Threat Model Validation", "Feature Workflow", "Diff-to-Threat Review", "Compilation", "Report Generation", "Diagram Generation"], "description": "Read authored .tmdd/ YAML files (system.yaml, actors.yaml, components.yaml, features.yaml, data_flows.yaml, threats/*.yaml) via yaml.safe_load()"}}, {"data": {"id": "e_df_init_templates", "source": "template_store", "target": "filesystem_store", "label": "filesystem", "edgeColor": "#e74c3c", "flowId": "df_init_templates", "features": ["Project Initialization"], "description": "Template YAML files with {{name}} and {{description}} placeholders substituted with user input, written to target directory"}}, {"data": {"id": "e_df_feature_to_prompts", "source": "feature_engine", "target": "prompt_generator", "label": "function_call", "edgeColor": "#2ecc71", "flowId": "df_feature_to_prompts", "features": ["Feature Workflow"], "description": "Loaded threat model dict and feature metadata for threat-modeling prompt generation"}}, {"data": {"id": "e_df_compile_to_prompts", "source": "compile_engine", "target": "prompt_generator", "label": "function_call", "edgeColor": "#f39c12", "flowId": "df_compile_to_prompts", "features": ["Compilation"], "description": "Loaded threat model dict for secure-coding agent prompt generation"}}, {"data": {"id": "e_df_prompts_to_filesystem", "source": "prompt_generator", "target": "filesystem_store", "label": "filesystem", "edgeColor": "#2ecc71", "flowId": "df_prompts_to_filesystem", "features": ["Feature Workflow", "Compilation"], "description": "Generated text prompt files (*.threatmodel.txt, *.prompt.txt) written to .tmdd/out/"}}, {"data": {"id": "e_df_developer_to_html", "source": "developer", "target": "html_renderer", "label": "stdin", "edgeColor": "#1abc9c", "flowId": "df_developer_to_html", "features": ["Report Generation", "Diagram Generation"], "description": "Standalone invocation of report.py / diagram.py with model path, output directory and output filename"}}, {"data": {"id": "e_df_html_to_filesystem", "source": "html_renderer", "target": "filesystem_store", "label": "filesystem", "edgeColor": "#1abc9c", "flowId": "df_html_to_filesystem", "features": ["Report Generation", "Diagram Generation"], "description": "Generated HTML files (tm.html, diagram.html) with embedded JSON data and JavaScript, written to .tmdd/out/"}}, {"data": {"id": "e_df_review_to_git", "source": "review_engine", "target": "git_cli", "label": "subprocess", "edgeColor": "#9b59b6", "flowId": "df_review_to_git", "features": ["Diff-to-Threat Review"], "description": "git diff --name-only invocation carrying the user-provided --base ref/--repo-root; returns the list of changed file paths for the review command"}}, {"data": {"id": "e_df_cdn_to_browser", "source": "cdn_libraries", "target": "report_viewer", "label": "HTTPS", "edgeColor": "#1abc9c", "flowId": "df_cdn_to_browser", "features": ["Report Generation", "Diagram Generation"], "description": "JavaScript libraries (cytoscape.min.js, dagre.min.js, cytoscape-dagre.js) loaded via script tags from unpkg.com"}}, {"data": {"id": "e_df_filesystem_to_viewer", "source": "filesystem_store", "target": "report_viewer", "label": "filesystem", "edgeColor": "#1abc9c", "flowId": "df_filesystem_to_viewer", "features": ["Report Generation", "Diagram Generation"], "description": "HTML report/diagram files served to browser with embedded threat model data in JSON format"}}, {"data": {"id": "e_df_filesystem_to_agent", "source": "filesystem_store", "target": "ai_agent", "label": "filesystem", "edgeColor": "#2ecc71", "flowId": "df_filesystem_to_agent", "features": ["Feature Workflow"], "description": "Generated prompt text files consumed by AI agent for threat modeling or secure code generation"}}], "legend": [{"name": "Project Initialization", "color": "#e74c3c", "goal": "Create a new TMDD threat model project from a template (minimal, web-app, or api)", "flows": ["df_developer_to_cli", "df_cli_to_init", "df_init_templates"], "threats": [{"id": "yaml_template_injection", "name": "YAML template injection via init command name/description", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "yaml_escape_init_input", "description": "Escape or quote user-provided name/description values before substituting into YAML templates during init, using yaml.dump() or proper YAML string quoting to prevent structural injection"}]}]}, {"name": "Threat Model Validation", "color": "#3498db", "goal": "Validate all .tmdd/ YAML files for structural correctness and cross-reference integrity, including that mitigation references resolve to real files", "flows": ["df_developer_to_cli", "df_cli_to_lint", "df_lint_to_yaml", "df_yaml_to_model"], "threats": [{"id": "no_audit_trail", "name": "No audit trail for threat model modifications", "severity": "medium", "stride": "R", "mode": "accepted", "mitigations": []}, {"id": "mitigation_reference_path_escape", "name": "Mitigation reference path escapes repo root during lint", "severity": "low", "stride": "I", "mode": "default", "mitigations": [{"id": "confine_reference_paths", "description": "In the lint reference-resolution check, reject absolute reference paths and normalize the joined path (resolve/normpath) to verify it stays within repo_root before calling .exists(), preventing filesystem probing outside the project"}]}]}, {"name": "Feature Workflow", "color": "#2ecc71", "goal": "Generate AI prompts for threat modeling new features or producing secure implementation guidance", "flows": ["df_developer_to_cli", "df_cli_to_feature", "df_feature_to_yaml", "df_yaml_to_model", "df_feature_to_prompts", "df_prompts_to_filesystem", "df_filesystem_to_agent"], "threats": [{"id": "prompt_injection", "name": "Prompt injection via threat model content in generated AI prompts", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "prompt_delimiters", "description": "Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content"}]}]}, {"name": "Diff-to-Threat Review", "color": "#9b59b6", "goal": "Map a code diff to the threats it may affect by matching changed files to component source_paths, then tracing data flows -> features -> threats/mitigations", "flows": ["df_developer_to_cli", "df_cli_to_review", "df_review_to_yaml", "df_yaml_to_model", "df_review_to_git"], "threats": [{"id": "glob_redos", "name": "Regex denial of service via crafted component source_paths glob", "severity": "medium", "stride": "D", "mode": "default", "mitigations": [{"id": "bound_glob_complexity", "description": "Cap the number of wildcard segments (and overall length) allowed in a component source_paths glob before translating it in glob_to_regex(), and/or match with a linear-time engine or a timeout, so a crafted pattern cannot cause catastrophic regex backtracking in tmdd review"}]}, {"id": "review_git_arg_injection", "name": "Argument injection into git subprocess via --base ref", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "validate_git_ref", "description": "Validate the --base value against an allowed git ref-name pattern (or resolve it with 'git rev-parse --verify' and separate options from revisions using '--') before building the diff range in changed_files_from_git()"}]}]}, {"name": "Compilation", "color": "#f39c12", "goal": "Generate consolidated YAML and AI implementation prompts from the full threat model", "flows": ["df_developer_to_cli", "df_cli_to_compile", "df_compile_to_yaml", "df_yaml_to_model", "df_compile_to_prompts", "df_prompts_to_filesystem"], "threats": [{"id": "prompt_injection", "name": "Prompt injection via threat model content in generated AI prompts", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "prompt_delimiters", "description": "Add clear delimiter markers and role boundaries in generated AI prompts to reduce the effectiveness of prompt injection from threat model content"}]}]}, {"name": "Report Generation", "color": "#1abc9c", "goal": "Generate a standalone interactive HTML threat model report with architecture diagram", "flows": ["df_developer_to_html", "df_html_to_yaml", "df_yaml_to_model", "df_html_to_filesystem", "df_cdn_to_browser", "df_filesystem_to_viewer"], "threats": [{"id": "cdn_supply_chain_attack", "name": "Supply chain attack via CDN JavaScript dependencies", "severity": "high", "stride": "T", "mode": "default", "mitigations": [{"id": "sri_hashes_cdn", "description": "Pin CDN library versions with Subresource Integrity (SRI) hashes on all <script> tags in generated HTML to prevent tampered JavaScript from executing"}, {"id": "bundle_libs_locally", "description": "Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing"}]}, {"id": "xss_stored_diagram", "name": "Stored XSS via innerHTML in diagram JavaScript", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "replace_innerhtml_textcontent", "description": "Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction"}, {"id": "js_html_escape_helper", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}]}, {"id": "xss_stored_node_info", "name": "Stored XSS via innerHTML in node-info panel", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "replace_innerhtml_textcontent", "description": "Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction"}, {"id": "js_html_escape_helper", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}]}, {"id": "json_script_breakout", "name": "Script tag breakout in embedded JSON diagram data", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "js_html_escape_helper", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}, {"id": "enhanced_safe_json", "description": "Enhance _safe_json() to escape additional dangerous characters beyond <\/ including HTML entities and ensure Content-Type is set correctly for embedded JSON data"}]}, {"id": "report_path_traversal", "name": "Report output path traversal via --name parameter", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "validate_report_filename", "description": "Validate the --name output filename in report.py by stripping path separators and applying safe_name() or os.path.basename() before joining with the output directory, consistent with diagram.py's safe_name() approach"}]}]}, {"name": "Diagram Generation", "color": "#e67e22", "goal": "Generate a standalone interactive HTML architecture diagram with optional feature highlighting", "flows": ["df_developer_to_html", "df_html_to_yaml", "df_yaml_to_model", "df_html_to_filesystem", "df_cdn_to_browser", "df_filesystem_to_viewer"], "threats": [{"id": "cdn_supply_chain_attack", "name": "Supply chain attack via CDN JavaScript dependencies", "severity": "high", "stride": "T", "mode": "default", "mitigations": [{"id": "sri_hashes_cdn", "description": "Pin CDN library versions with Subresource Integrity (SRI) hashes on all <script> tags in generated HTML to prevent tampered JavaScript from executing"}, {"id": "bundle_libs_locally", "description": "Bundle Cytoscape.js and dagre libraries locally instead of relying on CDN, eliminating the external dependency and enabling fully offline report viewing"}]}, {"id": "xss_stored_diagram", "name": "Stored XSS via innerHTML in diagram JavaScript", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "replace_innerhtml_textcontent", "description": "Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction"}, {"id": "js_html_escape_helper", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}]}, {"id": "xss_stored_node_info", "name": "Stored XSS via innerHTML in node-info panel", "severity": "medium", "stride": "T", "mode": "default", "mitigations": [{"id": "replace_innerhtml_textcontent", "description": "Replace innerHTML assignments in _DIAGRAM_JS with textContent for plain text values, or use DOM createElement/createTextNode for safe HTML construction"}, {"id": "js_html_escape_helper", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}]}, {"id": "json_script_breakout", "name": "Script tag breakout in embedded JSON diagram data", "severity": "low", "stride": "T", "mode": "default", "mitigations": [{"id": "js_html_escape_helper", "description": "Implement a JavaScript HTML-escape helper function in _DIAGRAM_JS and apply it to all threat model values (names, descriptions, labels) before inserting into HTML strings"}, {"id": "enhanced_safe_json", "description": "Enhance _safe_json() to escape additional dangerous characters beyond <\/ including HTML entities and ensure Content-Type is set correctly for embedded JSON data"}]}]}], "highlightFeature": ""}</script>
+<script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+<script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
+<script>
+(function () {
+  var dataEl = document.getElementById('diagram-data');
+  if (!dataEl) return;
+  var data = JSON.parse(dataEl.textContent);
+
+  /* --- HTML-escape helper (prevent XSS from YAML data) ------------------ */
+  var _e = document.createElement('div');
+  function esc(s) { if (s == null) return ''; _e.textContent = String(s); return _e.innerHTML; }
+
+  /* --- wait for CDN libs ------------------------------------------------ */
+  if (typeof cytoscape === 'undefined') {
+    document.getElementById('cy').innerHTML =
+      '<p style="padding:2rem;color:#666;">Interactive diagram requires an internet connection.</p>';
+    return;
+  }
+
+  /* Register dagre layout extension */
+  if (typeof cytoscapeDagre === 'function') cytoscapeDagre(cytoscape);
+
+  var layoutOpts = {
+    name: 'dagre',
+    rankDir: 'TB',
+    nodeSep: 50,
+    rankSep: 70,
+    edgeSep: 10,
+    padding: 30,
+    animate: false
+  };
+
+  var cy = window._cy = cytoscape({
+    container: document.getElementById('cy'),
+    elements: data.nodes.concat(data.edges),
+    minZoom: 0.15,
+    maxZoom: 4,
+    wheelSensitivity: 0.25,
+    boxSelectionEnabled: false,
+
+    style: [
+      /* ----- compound / boundary nodes --------------------------------- */
+      {
+        selector: 'node[nodeType="boundary"]',
+        style: {
+          'shape': 'round-rectangle',
+          'background-color': '#f4f5f7',
+          'background-opacity': 0.35,
+          'border-width': 2,
+          'border-style': 'dashed',
+          'border-color': 'data(borderColor)',
+          'label': 'data(label)',
+          'text-valign': 'top',
+          'text-halign': 'center',
+          'font-size': '13px',
+          'font-weight': 'bold',
+          'color': '#555',
+          'padding': '24px',
+          'text-margin-y': -5
+        }
+      },
+      /* ----- actor nodes ----------------------------------------------- */
+      {
+        selector: 'node[nodeType="actor"]',
+        style: {
+          'shape': 'ellipse',
+          'background-color': '#ecf0f1',
+          'border-width': 1.5,
+          'border-color': '#bdc3c7',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '11px',
+          'color': '#2c3e50',
+          'width': 'label',
+          'height': 'label',
+          'padding': '14px',
+          'text-wrap': 'wrap',
+          'text-max-width': '90px'
+        }
+      },
+      /* ----- component nodes (generic) --------------------------------- */
+      {
+        selector: 'node[nodeType!="boundary"][nodeType!="actor"]',
+        style: {
+          'shape': 'data(shape)',
+          'background-color': 'data(bgColor)',
+          'label': 'data(label)',
+          'text-valign': 'center',
+          'text-halign': 'center',
+          'font-size': '11px',
+          'color': '#fff',
+          'text-outline-width': 1,
+          'text-outline-color': 'data(bgColor)',
+          'width': 'label',
+          'height': 'label',
+          'padding': '14px',
+          'text-wrap': 'wrap',
+          'text-max-width': '110px',
+          'border-width': 0
+        }
+      },
+      /* ----- edges ----------------------------------------------------- */
+      {
+        selector: 'edge',
+        style: {
+          'width': 2,
+          'line-color': 'data(edgeColor)',
+          'target-arrow-color': 'data(edgeColor)',
+          'target-arrow-shape': 'triangle',
+          'curve-style': 'bezier',
+          'label': 'data(label)',
+          'font-size': '9px',
+          'color': '#555',
+          'text-background-color': '#fff',
+          'text-background-opacity': 0.85,
+          'text-background-padding': '2px',
+          'arrow-scale': 1.2
+        }
+      },
+      /* ----- hover / selected states ----------------------------------- */
+      {
+        selector: 'node:active, node:selected',
+        style: {
+          'overlay-color': '#2980b9',
+          'overlay-opacity': 0.12,
+          'border-width': 3,
+          'border-color': '#2980b9'
+        }
+      },
+      {
+        selector: 'edge:selected',
+        style: { 'width': 4, 'overlay-opacity': 0.08 }
+      }
+    ],
+
+    layout: layoutOpts
+  });
+
+  /* ----- Severity / STRIDE colour maps --------------------------------- */
+  var sevColors = { critical: '#dc2626', high: '#ea580c', medium: '#ca8a04', low: '#65a30d' };
+  var strideColors = { S: '#8b5cf6', T: '#ef4444', R: '#f97316', I: '#3b82f6', D: '#6b7280', E: '#ec4899' };
+
+  /* ----- Info panel on tap --------------------------------------------- */
+  var info = document.getElementById('node-info');
+  var fpanel = document.getElementById('feature-panel');
+
+  cy.on('tap', 'node[nodeType!="boundary"]', function (evt) {
+    if (fpanel.style.display === 'block') return;
+    var d = evt.target.data();
+    var h = '<strong>' + esc(d.label) + '</strong>';
+    if (d.description) h += '<div>' + esc(d.description) + '</div>';
+    if (d.technology) h += '<div><span class="info-label">Tech:</span> ' + esc(d.technology) + '</div>';
+    if (d.nodeType && d.nodeType !== 'actor')
+      h += '<div><span class="info-label">Type:</span> ' + esc(d.nodeType) + '</div>';
+    if (d.sourcePaths && d.sourcePaths.length)
+      h += '<div><span class="info-label">Sources:</span> ' + d.sourcePaths.map(function(p){ return '<code>' + esc(p) + '</code>'; }).join(' ') + '</div>';
+    info.innerHTML = h;
+    info.style.display = 'block';
+  });
+
+  cy.on('tap', 'edge', function (evt) {
+    if (fpanel.style.display === 'block') return;
+    var d = evt.target.data();
+    var h = '<strong>' + esc(d.flowId) + '</strong>';
+    if (d.label) h += ' <code>' + esc(d.label) + '</code>';
+    if (d.description) h += '<div>' + esc(d.description) + '</div>';
+    if (d.features && d.features.length)
+      h += '<div><span class="info-label">Features:</span> ' + esc(d.features.join(', ')) + '</div>';
+    info.innerHTML = h;
+    info.style.display = 'block';
+  });
+
+  cy.on('tap', function (evt) {
+    if (evt.target === cy) {
+      info.style.display = 'none';
+      clearFeatureHighlight();
+    }
+  });
+
+  /* ----- Feature highlight + threat panel ------------------------------ */
+  var activeFeature = null;
+
+  function clearFeatureHighlight() {
+    activeFeature = null;
+    fpanel.style.display = 'none';
+    info.style.display = 'none';
+    cy.elements().removeClass('dimmed');
+    cy.edges().style({ 'opacity': 1, 'width': 2 });
+    cy.nodes().style({ 'opacity': 1 });
+    document.querySelectorAll('.legend-item').forEach(function (el) { el.classList.remove('active'); });
+  }
+
+  function showFeature(feat, idx) {
+    if (activeFeature === feat.name) { clearFeatureHighlight(); return; }
+    activeFeature = feat.name;
+    info.style.display = 'none';
+
+    /* Dim all edges, then highlight matching ones */
+    cy.edges().style({ 'opacity': 0.1, 'width': 1 });
+    cy.nodes('[nodeType!="boundary"]').style({ 'opacity': 0.35 });
+    var flowSet = {};
+    (feat.flows || []).forEach(function (f) { flowSet[f] = true; });
+    var touchedNodes = {};
+    cy.edges().forEach(function (edge) {
+      if (flowSet[edge.data('flowId')]) {
+        edge.style({ 'opacity': 1, 'width': 3 });
+        touchedNodes[edge.data('source')] = true;
+        touchedNodes[edge.data('target')] = true;
+      }
+    });
+    cy.nodes().forEach(function (n) {
+      if (touchedNodes[n.data('id')] || n.data('nodeType') === 'boundary') {
+        n.style({ 'opacity': 1 });
+      }
+    });
+
+    /* Mark active legend item */
+    document.querySelectorAll('.legend-item').forEach(function (el, i) {
+      el.classList.toggle('active', i === idx);
+    });
+
+    /* Build threat detail panel */
+    var h = '<div class="fp-header">' +
+      '<span class="fp-dot" style="background:' + feat.color + '"></span>' +
+      '<strong>' + esc(feat.name) + '</strong>' +
+      '<button class="fp-close" onclick="clearFeatureHighlight()" title="Close">&times;</button>' +
+      '</div><div class="fp-body">';
+    if (feat.goal) h += '<div class="fp-goal">' + esc(feat.goal) + '</div>';
+
+    /* Data flows */
+    if (feat.flows && feat.flows.length) {
+      h += '<div class="fp-section"><div class="fp-section-title">Data Flows</div>' +
+        '<div class="fp-flows">';
+      feat.flows.forEach(function (f) { h += '<code>' + esc(f) + '</code>'; });
+      h += '</div></div>';
+    }
+
+    /* Threats */
+    var threats = feat.threats || [];
+    if (threats.length) {
+      h += '<div class="fp-section"><div class="fp-section-title">Threats (' + threats.length + ')</div>';
+      threats.forEach(function (t) {
+        var sc = sevColors[t.severity] || '#6b7280';
+        var stc = strideColors[t.stride] || '#6b7280';
+        h += '<div class="fp-threat" style="border-left-color:' + sc + '">' +
+          '<div class="fp-threat-head">' +
+          '<code>' + esc(t.id) + '</code> ' +
+          '<span class="sev" style="background:' + sc + '">' + esc(t.severity.toUpperCase()) + '</span> ' +
+          '<span class="stride-tag" style="background:' + stc + '">' + esc(t.stride) + '</span> ' +
+          '<span>' + esc(t.name) + '</span></div>';
+        if (t.mode === 'accepted') {
+          h += '<div class="fp-mit"><span class="fp-mode">Risk accepted</span></div>';
+        } else if (t.mode === 'unmapped') {
+          h += '<div class="fp-mit"><span class="fp-mode">Mitigations not yet mapped</span></div>';
+        } else {
+          (t.mitigations || []).forEach(function (m) {
+            h += '<div class="fp-mit"><code>' + esc(m.id) + '</code> ' + esc(m.description) + '</div>';
+          });
+          if (t.mode === 'default')
+            h += '<div class="fp-mit"><span class="fp-mode">(from catalog defaults)</span></div>';
+        }
+        h += '</div>';
+      });
+      h += '</div>';
+    } else {
+      h += '<div class="fp-section"><div class="fp-section-title">Threats</div>' +
+        '<div style="color:#999;font-style:italic;">No threats mapped</div></div>';
+    }
+    h += '</div>';
+    fpanel.innerHTML = h;
+    fpanel.style.display = 'block';
+  }
+  window.clearFeatureHighlight = clearFeatureHighlight;
+
+  /* ----- Legend (clickable) --------------------------------------------- */
+  var legendEl = document.getElementById('diagram-legend');
+  if (data.legend && data.legend.length && legendEl) {
+    var lh = '<div class="legend-title">Features <span style="font-weight:normal;font-size:0.85em;color:#aaa;">(click to inspect)</span></div>';
+    data.legend.forEach(function (it, idx) {
+      lh += '<div class="legend-item" data-idx="' + idx + '">' +
+        '<span class="legend-dot" style="background:' + it.color + '"></span>' +
+        esc(it.name) + '</div>';
+    });
+    legendEl.innerHTML = lh;
+    legendEl.querySelectorAll('.legend-item').forEach(function (el) {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var i = parseInt(this.getAttribute('data-idx'));
+        showFeature(data.legend[i], i);
+      });
+    });
+  }
+
+  /* ----- Toolbar handlers ---------------------------------------------- */
+  window._cyFit    = function () { cy.fit(null, 30); };
+  window._cyZoomIn = function () {
+    cy.zoom({ level: cy.zoom() * 1.3,
+              renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  };
+  window._cyZoomOut = function () {
+    cy.zoom({ level: cy.zoom() / 1.3,
+              renderedPosition: { x: cy.width() / 2, y: cy.height() / 2 } });
+  };
+  window._cyReset = function () {
+    cy.layout(layoutOpts).run();
+    setTimeout(function () { cy.fit(null, 30); }, 50);
+  };
+})();
+</script>
+<script></script>
+</body>
+</html>

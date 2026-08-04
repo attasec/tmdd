@@ -3,7 +3,12 @@
 import re
 from pathlib import Path
 
-from ..utils import load_yaml, resolve_model_dir
+from ..utils import (
+    load_yaml,
+    resolve_model_dir,
+    normalize_feature_threat,
+    FEATURE_THREAT_STATUSES,
+)
 
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 SEVERITY_VALUES = {"low", "medium", "high", "critical"}
@@ -226,13 +231,50 @@ def cmd_lint(args):
 
         # Dict mapping threat IDs -> mitigations (the required default format)
         elif isinstance(feature_threats, dict):
-            for threat_id, mits in feature_threats.items():
+            for threat_id, raw in feature_threats.items():
                 if threat_id not in threats:
                     add_error(loc, f"unknown threat '{threat_id}'")
                     continue
-                if mits == "accepted" or (
-                    isinstance(mits, dict) and mits.get("status") == "accepted"
-                ):
+                mapping = normalize_feature_threat(raw)
+                mits, threat_flows = mapping.mitigations, mapping.flows
+                # normalize_feature_threat() coerces an unrecognised status to
+                # 'required' so a typo fails safe at runtime; catch it here so
+                # it is not silently treated as outstanding work forever.
+                if isinstance(raw, dict):
+                    raw_status = raw.get("status")
+                    if (
+                        raw_status is not None
+                        and raw_status not in FEATURE_THREAT_STATUSES
+                    ):
+                        allowed = ", ".join(sorted(FEATURE_THREAT_STATUSES))
+                        add_error(
+                            loc,
+                            f"'{threat_id}' has invalid status '{raw_status}' (use: {allowed})",
+                        )
+                    elif raw_status == "implemented" and raw.get("mitigations") == (
+                        "accepted"
+                    ):
+                        add_error(
+                            loc,
+                            f"'{threat_id}' cannot be both implemented and accepted",
+                        )
+                # A flow binding that names a flow the feature does not declare
+                # can never match, so the threat would silently never surface.
+                if threat_flows is not None:
+                    declared = feature.get("data_flows", []) or []
+                    if not threat_flows:
+                        add_error(loc, f"'{threat_id}' has an empty 'flows' list")
+                    for flow_id in threat_flows:
+                        if flow_id not in flows:
+                            add_error(
+                                loc, f"'{threat_id}' binds unknown data_flow '{flow_id}'"
+                            )
+                        elif flow_id not in declared:
+                            add_error(
+                                loc,
+                                f"'{threat_id}' binds data_flow '{flow_id}' not declared by '{fname}'",
+                            )
+                if mits == "accepted":
                     continue
                 # "default" -> inherit suggested_mitigations from catalog
                 if mits == "default":
@@ -257,7 +299,9 @@ def cmd_lint(args):
                     continue
                 if not isinstance(mits, list):
                     add_error(
-                        loc, f"'{threat_id}' needs list, 'default', or 'accepted'"
+                        loc,
+                        f"'{threat_id}' needs list, 'default', 'accepted', "
+                        "or an object with 'mitigations'",
                     )
                     continue
                 for mit_id in mits:
@@ -288,8 +332,7 @@ def cmd_lint(args):
         has_accepted = False
         if isinstance(feature_threats, dict):
             has_accepted = any(
-                v == "accepted"
-                or (isinstance(v, dict) and v.get("status") == "accepted")
+                normalize_feature_threat(v).status == "accepted"
                 for v in feature_threats.values()
             )
         if has_accepted and not reviewed_by:

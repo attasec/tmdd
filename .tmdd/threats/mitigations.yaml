@@ -57,3 +57,21 @@ mitigations:
     references:
       - file: "report.py"
         lines: "1085-1088"
+
+  bound_glob_complexity:
+    description: "Cap the number of wildcard segments (and overall length) allowed in a component source_paths glob before translating it in glob_to_regex(), and/or match with a linear-time engine or a timeout, so a crafted pattern cannot cause catastrophic regex backtracking in tmdd review"
+    references:
+      - file: "src/utils.py"
+        lines: "92-127"
+
+  validate_git_ref:
+    description: "Validate the --base value against an allowed git ref-name pattern (or resolve it with 'git rev-parse --verify' and separate options from revisions using '--') before building the diff range in changed_files_from_git()"
+    references:
+      - file: "src/commands/review.py"
+        lines: "54-63"
+
+  confine_reference_paths:
+    description: "In the lint reference-resolution check, reject absolute reference paths and normalize the joined path (resolve/normpath) to verify it stays within repo_root before calling .exists(), preventing filesystem probing outside the project"
+    references:
+      - file: "src/commands/lint.py"
+        lines: "131-136"

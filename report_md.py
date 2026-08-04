@@ -8,7 +8,7 @@ download, no JavaScript, no trust concerns.
 """
 import re
 from src import load_threat_model
-from src.utils import get_output_dir, resolve_model_dir
+from src.utils import get_output_dir, resolve_model_dir, normalize_feature_threat
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -256,7 +256,8 @@ def _build_mitigations_table(mitigations, total_mitigations_used):
 
 def _resolve_mitigations_cell(mids, tinfo, mitigations_catalog):
     """Resolve mitigation IDs into a compact table cell string."""
-    if mids == "accepted" or (isinstance(mids, dict) and mids.get("status") == "accepted"):
+    mids = normalize_feature_threat(mids).mitigations
+    if mids == "accepted":
         return "**Risk accepted**"
     if mids == "default":
         resolved = tinfo.get("suggested_mitigations", [])
@@ -282,7 +283,7 @@ def _build_feature_section(feature, threats_catalog, mitigations_catalog):
 
     feature_threats = feature.get("threats", {})
     has_accepted = isinstance(feature_threats, dict) and any(
-        v == "accepted" or (isinstance(v, dict) and v.get("status") == "accepted")
+        normalize_feature_threat(v).status == "accepted"
         for v in feature_threats.values()
     )
     stale = fupdated and reviewed_at and fupdated > reviewed_at
@@ -381,7 +382,8 @@ def generate_markdown_report(threat_model, system_name):
         if isinstance(ft, list):
             total_threats_used.update(ft)
         elif isinstance(ft, dict):
-            for tid, mids in ft.items():
+            for tid, _raw in ft.items():
+                mids = normalize_feature_threat(_raw).mitigations
                 total_threats_used.add(tid)
                 if mids == "default":
                     tdef = threats.get(tid, {})
