@@ -7,23 +7,33 @@ features:
     goal: "Create a new TMDD threat model project from a template (minimal, web-app, or api)"
     input_data: [path, system name, description, template name]
     output_data: [YAML files in target directory]
-    data_flows: [df_developer_to_cli, df_cli_to_commands, df_init_templates]
+    data_flows: [df_developer_to_cli, df_cli_to_init, df_init_templates]
     threat_actors: [ci_pipeline_untrusted]
     threats:
-      yaml_template_injection: default
+      # user-supplied --name/--description arrive on the dispatch flow and are
+      # substituted into the templates written out by df_init_templates
+      yaml_template_injection:
+        mitigations: default
+        flows: [df_cli_to_init, df_init_templates]
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
 
   - name: "Threat Model Validation"
-    goal: "Validate all .tmdd/ YAML files for structural correctness and cross-reference integrity"
+    goal: "Validate all .tmdd/ YAML files for structural correctness and cross-reference integrity, including that mitigation references resolve to real files"
     input_data: [path to .tmdd directory]
     output_data: [validation results on stdout]
-    data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem]
+    data_flows: [df_developer_to_cli, df_cli_to_lint, df_lint_to_yaml, df_yaml_to_model]
     threat_actors: [malicious_insider_fs]
     threats:
-      no_audit_trail: accepted
-    last_updated: "2026-02-22"
+      no_audit_trail:
+        mitigations: accepted
+        flows: [df_yaml_to_model]
+      # the oracle is lint resolving mitigations.yaml reference paths
+      mitigation_reference_path_escape:
+        mitigations: default
+        flows: [df_lint_to_yaml, df_yaml_to_model]
+    last_updated: "2026-07-14"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
 
@@ -31,22 +41,46 @@ features:
     goal: "Generate AI prompts for threat modeling new features or producing secure implementation guidance"
     input_data: [feature name, description, loaded threat model]
     output_data: [prompt text files in .tmdd/out/]
-    data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem, df_filesystem_to_agent]
+    data_flows: [df_developer_to_cli, df_cli_to_feature, df_feature_to_yaml, df_yaml_to_model, df_feature_to_prompts, df_prompts_to_filesystem, df_filesystem_to_agent]
     threat_actors: [malicious_insider_fs]
     threats:
-      prompt_injection: default
+      # tainted model text is read at df_yaml_to_model and embedded downstream
+      prompt_injection:
+        mitigations: default
+        flows: [df_yaml_to_model, df_feature_to_prompts]
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
+
+  - name: "Diff-to-Threat Review"
+    goal: "Map a code diff to the threats it may affect by matching changed files to component source_paths, then tracing data flows -> features -> threats/mitigations"
+    input_data: [git ref or --base, repo root, explicit --files list, loaded threat model]
+    output_data: [review checklist on stdout in text/json/md]
+    data_flows: [df_developer_to_cli, df_cli_to_review, df_review_to_yaml, df_yaml_to_model, df_review_to_git]
+    threat_actors: [malicious_insider_fs, ci_pipeline_untrusted]
+    threats:
+      # crafted source_paths come from the model itself
+      glob_redos:
+        mitigations: default
+        flows: [df_yaml_to_model, df_review_to_yaml]
+      # --base is a CLI argument; nothing to do with model content
+      review_git_arg_injection:
+        mitigations: default
+        flows: [df_cli_to_review, df_review_to_git]
+    last_updated: "2026-07-14"
+    reviewed_at: "2000-01-01"
+    # reviewed_by: — intentionally unset; added by a human reviewer after manual review
 
   - name: "Compilation"
     goal: "Generate consolidated YAML and AI implementation prompts from the full threat model"
     input_data: [path to .tmdd directory, optional feature filter]
     output_data: [consolidated .tm.yaml file, prompt text file in .tmdd/out/]
-    data_flows: [df_developer_to_cli, df_cli_to_commands, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_prompts, df_prompts_to_filesystem]
+    data_flows: [df_developer_to_cli, df_cli_to_compile, df_compile_to_yaml, df_yaml_to_model, df_compile_to_prompts, df_prompts_to_filesystem]
     threat_actors: [malicious_insider_fs]
     threats:
-      prompt_injection: default
+      prompt_injection:
+        mitigations: default
+        flows: [df_yaml_to_model, df_compile_to_prompts]
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"
@@ -55,14 +89,27 @@ features:
     goal: "Generate a standalone interactive HTML threat model report with architecture diagram"
     input_data: [path to .tmdd directory, output directory, output filename]
     output_data: [HTML report file with embedded Cytoscape.js diagram]
-    data_flows: [df_developer_to_cli, df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
+    data_flows: [df_developer_to_html, df_html_to_yaml, df_yaml_to_model, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
     threat_actors: [cdn_package_attacker, malicious_insider_fs, ci_pipeline_untrusted]
     threats:
-      cdn_supply_chain_attack: default
-      xss_stored_diagram: default
-      xss_stored_node_info: default
-      json_script_breakout: default
-      report_path_traversal: default
+      # third-party JS arrives over the CDN flow only
+      cdn_supply_chain_attack:
+        mitigations: default
+        flows: [df_cdn_to_browser]
+      # model strings are read, embedded in HTML, then executed in the viewer
+      xss_stored_diagram:
+        mitigations: default
+        flows: [df_yaml_to_model, df_html_to_yaml, df_filesystem_to_viewer]
+      xss_stored_node_info:
+        mitigations: default
+        flows: [df_yaml_to_model, df_html_to_yaml, df_filesystem_to_viewer]
+      json_script_breakout:
+        mitigations: default
+        flows: [df_yaml_to_model, df_html_to_yaml, df_filesystem_to_viewer]
+      # --name is a report.py CLI argument
+      report_path_traversal:
+        mitigations: default
+        flows: [df_developer_to_html]
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-01-01"
@@ -71,13 +118,21 @@ features:
     goal: "Generate a standalone interactive HTML architecture diagram with optional feature highlighting"
     input_data: [path to .tmdd directory, optional feature name]
     output_data: [HTML diagram file with embedded Cytoscape.js visualization]
-    data_flows: [df_commands_to_yaml, df_yaml_to_filesystem, df_commands_to_html, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
+    data_flows: [df_developer_to_html, df_html_to_yaml, df_yaml_to_model, df_html_to_filesystem, df_cdn_to_browser, df_filesystem_to_viewer]
     threat_actors: [cdn_package_attacker, malicious_insider_fs]
     threats:
-      cdn_supply_chain_attack: default
-      xss_stored_diagram: default
-      xss_stored_node_info: default
-      json_script_breakout: default
+      cdn_supply_chain_attack:
+        mitigations: default
+        flows: [df_cdn_to_browser]
+      xss_stored_diagram:
+        mitigations: default
+        flows: [df_yaml_to_model, df_html_to_yaml, df_filesystem_to_viewer]
+      xss_stored_node_info:
+        mitigations: default
+        flows: [df_yaml_to_model, df_html_to_yaml, df_filesystem_to_viewer]
+      json_script_breakout:
+        mitigations: default
+        flows: [df_yaml_to_model, df_html_to_yaml, df_filesystem_to_viewer]
     last_updated: "2026-02-22"
     reviewed_by: "mik0w"
     reviewed_at: "2026-02-22"

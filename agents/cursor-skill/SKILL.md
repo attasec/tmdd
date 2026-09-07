@@ -137,8 +137,9 @@ components:
 - `description` must mention the actual technology and what it does in this project
 - `trust_boundary` must reflect the real deployment (not assumed)
 - `source_paths` (optional) should list glob patterns for source files that belong to this
-  component. This enables deterministic PR-to-component mapping for threat review workflows.
+  component. This enables deterministic PR-to-component mapping via `tmdd review` (see Phase 4).
   Prefer specific globs over overly broad ones (e.g., `src/routes/**` over `src/**`).
+  Supported glob syntax: `**` (any directories), `*` (within a path segment), `?` (one char).
 
 #### 2. `actors.yaml` — Real users and external systems
 
@@ -307,16 +308,29 @@ tmdd feature "Feature Name"
 
 ---
 
-## Phase 4 — Validation & Compilation
+## Phase 4 — Validation, Review & Compilation
 
 ```bash
-# Validate all cross-references
+# Validate all cross-references (also checks mitigation references resolve to real files)
 tmdd lint .tmdd
+tmdd lint .tmdd --strict-refs             # fail if any referenced file is missing (CI gating)
+
+# Map a diff to the threats it affects (PR/branch security review)
+tmdd review .tmdd --base origin/main               # working checklist
+tmdd review .tmdd --base origin/main --format md   # markdown for a PR comment
+tmdd review .tmdd --files src/routes/search.ts     # explicit file(s), no git
 
 # Generate consolidated output
 tmdd compile .tmdd                        # Full system
 tmdd compile .tmdd --feature "Login"      # Single feature
 ```
+
+**`tmdd review`** matches changed files to components via `source_paths`, then traces
+through data flows and features to the affected threats and their required mitigations. It
+also surfaces coverage gaps — changed files that match no component (unmodeled surface) and
+components with no `source_paths`. When reviewing a change, use it to focus only on the
+threats that change actually touches, and extend `source_paths` whenever a real source file
+comes back unmapped.
 
 ---
 

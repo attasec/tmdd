@@ -72,6 +72,34 @@ class TestCLICompile:
         assert result == 1
 
 
+class TestCLIReview:
+    def test_review_explicit_files(self, valid_model_dir, capsys):
+        with patch("sys.argv", ["tmdd", "review", str(valid_model_dir), "--files", "src/api/x.py"]):
+            result = main()
+        assert result == 0
+        assert "changed file" in capsys.readouterr().out
+
+    def test_review_json_format(self, valid_model_dir, capsys):
+        with patch("sys.argv", ["tmdd", "review", str(valid_model_dir),
+                                "--files", "a.py", "--format", "json"]):
+            result = main()
+        assert result == 0
+        assert '"changed_files"' in capsys.readouterr().out
+
+    def test_review_nonexistent_returns_1(self, tmp_path, capsys):
+        with patch("sys.argv", ["tmdd", "review", str(tmp_path / "nope"), "--files", "a.py"]):
+            result = main()
+        assert result == 1
+        assert "Error" in capsys.readouterr().err
+
+
+class TestCLILintStrictRefs:
+    def test_strict_refs_flag_parses(self, valid_model_dir):
+        with patch("sys.argv", ["tmdd", "lint", str(valid_model_dir), "--strict-refs"]):
+            result = main()
+        assert result == 0  # valid model has no rich references
+
+
 class TestCLIFeature:
     def test_feature_existing(self, valid_model_dir, tmp_path, monkeypatch, capsys):
         monkeypatch.chdir(tmp_path)

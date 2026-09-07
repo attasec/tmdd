@@ -3,36 +3,102 @@
 # =============================================================================
 # Traced from actual code paths in src/cli.py, src/commands/, src/generators/,
 # report.py, and diagram.py
+#
+# Flows are per-command rather than routed through a single command_engine hub:
+# `tmdd review` walks components -> flows -> features, so a shared hub flow
+# makes every feature reachable from every changed file.
 # =============================================================================
 
 data_flows:
   - id: df_developer_to_cli
     source: developer
     destination: cli_core
-    data_description: "CLI commands with arguments (path, feature name, description, template name)"
+    data_description: "CLI commands with arguments (path, feature name, description, template name, --base ref)"
     protocol: stdin
     authentication: none
 
-  - id: df_cli_to_commands
+  # --- dispatch: cli_core -> individual command handlers ---
+
+  - id: df_cli_to_init
     source: cli_core
-    destination: command_engine
-    data_description: "Parsed argparse Namespace object with user-provided values"
+    destination: init_engine
+    data_description: "Parsed argparse Namespace for init: target path, system name, description, template name"
     protocol: function_call
     authentication: none
 
-  - id: df_commands_to_yaml
-    source: command_engine
+  - id: df_cli_to_lint
+    source: cli_core
+    destination: lint_engine
+    data_description: "Parsed argparse Namespace for lint: path to the .tmdd directory"
+    protocol: function_call
+    authentication: none
+
+  - id: df_cli_to_feature
+    source: cli_core
+    destination: feature_engine
+    data_description: "Parsed argparse Namespace for feature: feature name, description, model path"
+    protocol: function_call
+    authentication: none
+
+  - id: df_cli_to_compile
+    source: cli_core
+    destination: compile_engine
+    data_description: "Parsed argparse Namespace for compile: model path, optional feature filter"
+    protocol: function_call
+    authentication: none
+
+  - id: df_cli_to_review
+    source: cli_core
+    destination: review_engine
+    data_description: "Parsed argparse Namespace for review: model path, --base ref, --staged, --files, --repo-root, output format"
+    protocol: function_call
+    authentication: none
+
+  # --- model loading: each command loads the model through yaml_processor ---
+
+  - id: df_lint_to_yaml
+    source: lint_engine
     destination: yaml_processor
-    data_description: "File paths to load; returns parsed YAML dicts (system, actors, components, threats, mitigations)"
+    data_description: "File paths to load; returns parsed YAML dicts for structural and cross-reference validation"
     protocol: function_call
     authentication: none
 
-  - id: df_yaml_to_filesystem
+  - id: df_feature_to_yaml
+    source: feature_engine
+    destination: yaml_processor
+    data_description: "File paths to load; returns the parsed threat model used to build feature prompts"
+    protocol: function_call
+    authentication: none
+
+  - id: df_compile_to_yaml
+    source: compile_engine
+    destination: yaml_processor
+    data_description: "File paths to load; returns the full parsed model for consolidation into .tm.yaml"
+    protocol: function_call
+    authentication: none
+
+  - id: df_review_to_yaml
+    source: review_engine
+    destination: yaml_processor
+    data_description: "File paths to load, plus component source_paths globs translated to regexes for changed-file matching"
+    protocol: function_call
+    authentication: none
+
+  - id: df_html_to_yaml
+    source: html_renderer
+    destination: yaml_processor
+    data_description: "File paths to load; returns the parsed model rendered into HTML report and diagram output"
+    protocol: function_call
+    authentication: none
+
+  - id: df_yaml_to_model
     source: yaml_processor
-    destination: filesystem_store
-    data_description: "Read .tmdd/ YAML files (system.yaml, actors.yaml, components.yaml, features.yaml, data_flows.yaml, threats/*.yaml)"
+    destination: threat_model_store
+    data_description: "Read authored .tmdd/ YAML files (system.yaml, actors.yaml, components.yaml, features.yaml, data_flows.yaml, threats/*.yaml) via yaml.safe_load()"
     protocol: filesystem
     authentication: none
+
+  # --- writes ---
 
   - id: df_init_templates
     source: template_store
@@ -41,10 +107,17 @@ data_flows:
     protocol: filesystem
     authentication: none
 
-  - id: df_commands_to_prompts
-    source: command_engine
+  - id: df_feature_to_prompts
+    source: feature_engine
     destination: prompt_generator
-    data_description: "Loaded threat model dict and feature metadata for prompt generation"
+    data_description: "Loaded threat model dict and feature metadata for threat-modeling prompt generation"
+    protocol: function_call
+    authentication: none
+
+  - id: df_compile_to_prompts
+    source: compile_engine
+    destination: prompt_generator
+    data_description: "Loaded threat model dict for secure-coding agent prompt generation"
     protocol: function_call
     authentication: none
 
@@ -55,11 +128,11 @@ data_flows:
     protocol: filesystem
     authentication: none
 
-  - id: df_commands_to_html
-    source: command_engine
+  - id: df_developer_to_html
+    source: developer
     destination: html_renderer
-    data_description: "Loaded threat model dict passed to report/diagram generators"
-    protocol: function_call
+    data_description: "Standalone invocation of report.py / diagram.py with model path, output directory and output filename"
+    protocol: stdin
     authentication: none
 
   - id: df_html_to_filesystem
@@ -67,6 +140,15 @@ data_flows:
     destination: filesystem_store
     data_description: "Generated HTML files (tm.html, diagram.html) with embedded JSON data and JavaScript, written to .tmdd/out/"
     protocol: filesystem
+    authentication: none
+
+  # --- external / consumers ---
+
+  - id: df_review_to_git
+    source: review_engine
+    destination: git_cli
+    data_description: "git diff --name-only invocation carrying the user-provided --base ref/--repo-root; returns the list of changed file paths for the review command"
+    protocol: subprocess
     authentication: none
 
   - id: df_cdn_to_browser

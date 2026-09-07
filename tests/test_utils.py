@@ -11,6 +11,8 @@ from src.utils import (
     load_threat_model,
     get_output_dir,
     get_project_root,
+    path_matches_glob,
+    path_matches_any,
 )
 
 
@@ -184,3 +186,49 @@ class TestGetProjectRoot:
         assert isinstance(root, Path)
         # The project root should contain a templates/ directory
         assert (root / "templates").is_dir()
+
+
+# ===== glob matching (component source_paths) =====
+
+class TestPathMatchesGlob:
+    def test_exact_file(self):
+        assert path_matches_glob("report.py", "report.py")
+        assert not path_matches_glob("report_md.py", "report.py")
+
+    def test_single_star_stays_within_segment(self):
+        assert path_matches_glob("src/routes/search.ts", "src/routes/*.ts")
+        assert not path_matches_glob("src/routes/sub/search.ts", "src/routes/*.ts")
+
+    def test_double_star_trailing_matches_subtree(self):
+        assert path_matches_glob("src/commands/init.py", "src/commands/**")
+        assert path_matches_glob("src/commands/sub/deep.py", "src/commands/**")
+        assert not path_matches_glob("src/cli.py", "src/commands/**")
+
+    def test_double_star_prefix(self):
+        assert path_matches_glob("a/b/test_x.py", "**/test_*.py")
+        assert path_matches_glob("test_x.py", "**/test_*.py")
+        assert not path_matches_glob("a/b/prod_x.py", "**/test_*.py")
+
+    def test_question_mark(self):
+        assert path_matches_glob("a.py", "?.py")
+        assert not path_matches_glob("ab.py", "?.py")
+
+    def test_normalizes_leading_dot_slash_and_backslashes(self):
+        assert path_matches_glob("./src/cli.py", "src/cli.py")
+        assert path_matches_glob("src\\cli.py", "src/cli.py")
+
+    def test_regex_metacharacters_are_literal(self):
+        assert path_matches_glob("a.b.py", "a.b.py")
+        assert not path_matches_glob("axb.py", "a.b.py")
+
+
+class TestPathMatchesAny:
+    def test_matches_when_any_pattern_hits(self):
+        assert path_matches_any("report.py", ["diagram.py", "report.py"])
+
+    def test_no_match(self):
+        assert not path_matches_any("README.md", ["src/**", "report.py"])
+
+    def test_empty_or_none_patterns(self):
+        assert not path_matches_any("report.py", [])
+        assert not path_matches_any("report.py", None)

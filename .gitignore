@@ -13,6 +13,9 @@ build/
 
 # TMDD output
 
+# Local notes (tracked on disk, never pushed)
+todo.md
+
 # IDE
 .vscode/
 .idea/

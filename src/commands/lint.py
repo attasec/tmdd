@@ -1,7 +1,14 @@
 """TMDD lint command - Validate threat model files."""
-import re
 
-from ..utils import load_yaml, resolve_model_dir
+import re
+from pathlib import Path
+
+from ..utils import (
+    load_yaml,
+    resolve_model_dir,
+    normalize_feature_threat,
+    FEATURE_THREAT_STATUSES,
+)
 
 ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 SEVERITY_VALUES = {"low", "medium", "high", "critical"}
@@ -16,6 +23,13 @@ def cmd_lint(args):
     model_dir = resolve_model_dir(args.path)
     threats_dir = model_dir / "threats"
 
+    # Root that mitigation 'references' file paths resolve against. Source files
+    # live in the repo, not inside the model dir, so default to its parent (the
+    # documented convention that .tmdd/ sits at the repo root).
+    strict_refs = getattr(args, "strict_refs", False)
+    repo_root = getattr(args, "repo_root", None)
+    repo_root = Path(repo_root) if repo_root else model_dir.parent
+
     errors = []
     warnings = []
     data = {}
@@ -27,14 +41,22 @@ def cmd_lint(args):
         warnings.append(f"{loc}: {msg}")
 
     # --- check required files exist ---
-    main_files = ["system.yaml", "actors.yaml", "components.yaml", "features.yaml", "data_flows.yaml"]
+    main_files = [
+        "system.yaml",
+        "actors.yaml",
+        "components.yaml",
+        "features.yaml",
+        "data_flows.yaml",
+    ]
     threat_files = ["threats.yaml", "mitigations.yaml", "threat_actors.yaml"]
 
     missing = [f for f in main_files if not (model_dir / f).exists()]
     if not threats_dir.is_dir():
         missing.append("threats/")
     else:
-        missing += [f"threats/{f}" for f in threat_files if not (threats_dir / f).exists()]
+        missing += [
+            f"threats/{f}" for f in threat_files if not (threats_dir / f).exists()
+        ]
 
     if missing:
         print(f"Missing: {', '.join(missing)}")
@@ -107,8 +129,16 @@ def cmd_lint(args):
                     for i, ref in enumerate(refs):
                         if not isinstance(ref, dict):
                             add_error(loc, f"references[{i}] must be an object")
-                        elif not ref.get("file") or not isinstance(ref.get("file"), str):
+                        elif not ref.get("file") or not isinstance(
+                            ref.get("file"), str
+                        ):
                             add_error(loc, f"references[{i}] missing 'file'")
+                        elif not (repo_root / ref["file"]).exists():
+                            msg = f"references[{i}] file not found: '{ref['file']}'"
+                            if strict_refs:
+                                add_error(loc, msg)
+                            else:
+                                add_warning(loc, msg)
                 valid_ids.add(item_id)
             else:
                 add_error(loc, "must be a string or object with 'description'")
@@ -150,8 +180,12 @@ def cmd_lint(args):
 
     actors = validate_items("actors.yaml", "actors", ["id", "description"])
     components = validate_items("components.yaml", "components", ["id", "description"])
-    flows = validate_items("data_flows.yaml", "data_flows", ["id", "source", "destination"])
-    threat_actors = validate_items("threats/threat_actors.yaml", "threat_actors", ["id", "description"])
+    flows = validate_items(
+        "data_flows.yaml", "data_flows", ["id", "source", "destination"]
+    )
+    threat_actors = validate_items(
+        "threats/threat_actors.yaml", "threat_actors", ["id", "description"]
+    )
     endpoints = actors | components
 
     # --- cross-reference: data flow endpoints ---
@@ -186,7 +220,10 @@ def cmd_lint(args):
         # Flat list of threat IDs (no mitigation mapping)
         if isinstance(feature_threats, list):
             if not no_mitigations:
-                add_error(loc, f"'{fname}' threats must map to mitigations (use --no-mitigations to allow unmapped threats)")
+                add_error(
+                    loc,
+                    f"'{fname}' threats must map to mitigations (use --no-mitigations to allow unmapped threats)",
+                )
             else:
                 for threat_id in feature_threats:
                     if threat_id not in threats:
@@ -194,25 +231,78 @@ def cmd_lint(args):
 
         # Dict mapping threat IDs -> mitigations (the required default format)
         elif isinstance(feature_threats, dict):
-            for threat_id, mits in feature_threats.items():
+            for threat_id, raw in feature_threats.items():
                 if threat_id not in threats:
                     add_error(loc, f"unknown threat '{threat_id}'")
                     continue
-                if mits == "accepted" or (isinstance(mits, dict) and mits.get("status") == "accepted"):
+                mapping = normalize_feature_threat(raw)
+                mits, threat_flows = mapping.mitigations, mapping.flows
+                # normalize_feature_threat() coerces an unrecognised status to
+                # 'required' so a typo fails safe at runtime; catch it here so
+                # it is not silently treated as outstanding work forever.
+                if isinstance(raw, dict):
+                    raw_status = raw.get("status")
+                    if (
+                        raw_status is not None
+                        and raw_status not in FEATURE_THREAT_STATUSES
+                    ):
+                        allowed = ", ".join(sorted(FEATURE_THREAT_STATUSES))
+                        add_error(
+                            loc,
+                            f"'{threat_id}' has invalid status '{raw_status}' (use: {allowed})",
+                        )
+                    elif raw_status == "implemented" and raw.get("mitigations") == (
+                        "accepted"
+                    ):
+                        add_error(
+                            loc,
+                            f"'{threat_id}' cannot be both implemented and accepted",
+                        )
+                # A flow binding that names a flow the feature does not declare
+                # can never match, so the threat would silently never surface.
+                if threat_flows is not None:
+                    declared = feature.get("data_flows", []) or []
+                    if not threat_flows:
+                        add_error(loc, f"'{threat_id}' has an empty 'flows' list")
+                    for flow_id in threat_flows:
+                        if flow_id not in flows:
+                            add_error(
+                                loc, f"'{threat_id}' binds unknown data_flow '{flow_id}'"
+                            )
+                        elif flow_id not in declared:
+                            add_error(
+                                loc,
+                                f"'{threat_id}' binds data_flow '{flow_id}' not declared by '{fname}'",
+                            )
+                if mits == "accepted":
                     continue
                 # "default" -> inherit suggested_mitigations from catalog
                 if mits == "default":
                     threat_def = catalog.get(threat_id, {})
-                    suggested = threat_def.get("suggested_mitigations", []) if isinstance(threat_def, dict) else []
+                    suggested = (
+                        threat_def.get("suggested_mitigations", [])
+                        if isinstance(threat_def, dict)
+                        else []
+                    )
                     if not suggested:
-                        add_error(loc, f"'{threat_id}' has no suggested_mitigations in catalog (cannot use 'default')")
+                        add_error(
+                            loc,
+                            f"'{threat_id}' has no suggested_mitigations in catalog (cannot use 'default')",
+                        )
                     else:
                         for mit_id in suggested:
                             if mit_id not in mitigations:
-                                add_error(loc, f"unknown mitigation '{mit_id}' (via '{threat_id}' default)")
+                                add_error(
+                                    loc,
+                                    f"unknown mitigation '{mit_id}' (via '{threat_id}' default)",
+                                )
                     continue
                 if not isinstance(mits, list):
-                    add_error(loc, f"'{threat_id}' needs list, 'default', or 'accepted'")
+                    add_error(
+                        loc,
+                        f"'{threat_id}' needs list, 'default', 'accepted', "
+                        "or an object with 'mitigations'",
+                    )
                     continue
                 for mit_id in mits:
                     if mit_id not in mitigations:
@@ -242,7 +332,7 @@ def cmd_lint(args):
         has_accepted = False
         if isinstance(feature_threats, dict):
             has_accepted = any(
-                v == "accepted" or (isinstance(v, dict) and v.get("status") == "accepted")
+                normalize_feature_threat(v).status == "accepted"
                 for v in feature_threats.values()
             )
         if has_accepted and not reviewed_by:
@@ -250,9 +340,14 @@ def cmd_lint(args):
 
         # Warn: stale review (last_updated > reviewed_at)
         if last_updated and reviewed_at:
-            if DATE_PATTERN.match(str(last_updated)) and DATE_PATTERN.match(str(reviewed_at)):
+            if DATE_PATTERN.match(str(last_updated)) and DATE_PATTERN.match(
+                str(reviewed_at)
+            ):
                 if str(last_updated) > str(reviewed_at):
-                    add_warning(loc, f"'{fname}' updated ({last_updated}) after last review ({reviewed_at})")
+                    add_warning(
+                        loc,
+                        f"'{fname}' updated ({last_updated}) after last review ({reviewed_at})",
+                    )
 
     # --- report results ---
     if errors:

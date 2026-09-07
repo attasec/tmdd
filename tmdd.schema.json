@@ -11,34 +11,40 @@
       "pattern": "^[a-z][a-z0-9_]*$",
       "minLength": 1
     },
-
     "threat_id": {
       "$ref": "#/definitions/entity_id",
       "description": "Threat ID: descriptive symbolic name (e.g., sql_injection_search, xss_stored_report)"
     },
-
     "mitigation_id": {
       "$ref": "#/definitions/entity_id",
       "description": "Mitigation ID: descriptive symbolic name (e.g., parameterized_queries, input_validation)"
     },
-
     "threat_actor_id": {
       "$ref": "#/definitions/entity_id",
       "description": "Threat actor ID: descriptive symbolic name (e.g., external_attacker, malicious_insider)"
     },
-
     "severity": {
       "type": "string",
-      "enum": ["low", "medium", "high", "critical"],
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
       "description": "Threat severity level"
     },
-
     "stride": {
       "type": "string",
-      "enum": ["S", "T", "R", "I", "D", "E"],
+      "enum": [
+        "S",
+        "T",
+        "R",
+        "I",
+        "D",
+        "E"
+      ],
       "description": "STRIDE category: Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege"
     },
-
     "mitigation_reference": {
       "type": "object",
       "description": "A code reference pointing to where a mitigation is implemented",
@@ -54,10 +60,11 @@
           "pattern": "^\\d+(-\\d+)?$"
         }
       },
-      "required": ["file"],
+      "required": [
+        "file"
+      ],
       "additionalProperties": false
     },
-
     "mitigation_entry": {
       "description": "A mitigation can be a simple description string or a rich object with optional code references",
       "oneOf": [
@@ -77,32 +84,75 @@
             },
             "references": {
               "type": "array",
-              "items": { "$ref": "#/definitions/mitigation_reference" },
+              "items": {
+                "$ref": "#/definitions/mitigation_reference"
+              },
               "description": "Code locations where this mitigation is implemented"
             }
           },
-          "required": ["description"],
+          "required": [
+            "description"
+          ],
           "additionalProperties": true
         }
       ]
     },
-
     "feature_threat_value": {
-      "description": "How a threat is mitigated in a feature: 'default' (inherit from catalog), 'accepted' (risk accepted), or an explicit list of mitigation IDs",
+      "description": "How a threat is mitigated in a feature: 'default' (inherit from catalog), 'accepted' (risk accepted), an explicit list of mitigation IDs, or an object that additionally binds the threat to specific data flows",
       "oneOf": [
         {
           "type": "string",
-          "enum": ["default", "accepted"],
+          "enum": [
+            "default",
+            "accepted"
+          ],
           "description": "'default' inherits suggested_mitigations from catalog; 'accepted' means risk is accepted"
         },
         {
           "type": "array",
-          "items": { "$ref": "#/definitions/mitigation_id" },
+          "items": {
+            "$ref": "#/definitions/mitigation_id"
+          },
           "description": "Explicit list of mitigation IDs"
+        },
+        {
+          "type": "object",
+          "description": "Object form: mitigations plus an optional 'flows' binding. A threat with 'flows' is only surfaced by `tmdd review` when the diff touches one of them; without it the threat applies to every flow its feature declares.",
+          "properties": {
+            "mitigations": {
+              "description": "Same values as the scalar form: 'default', 'accepted', or a list of mitigation IDs",
+              "oneOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "default",
+                    "accepted"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/mitigation_id"
+                  }
+                }
+              ]
+            },
+            "flows": {
+              "type": "array",
+              "description": "Data flow IDs this threat lives on. Must be declared by the feature.",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "mitigations"
+          ],
+          "additionalProperties": false
         }
       ]
     },
-
     "system": {
       "type": "object",
       "description": "System metadata (system.yaml)",
@@ -124,13 +174,18 @@
               "description": "Version of this threat model"
             }
           },
-          "required": ["name", "description", "version"],
+          "required": [
+            "name",
+            "description",
+            "version"
+          ],
           "additionalProperties": true
         }
       },
-      "required": ["system"]
+      "required": [
+        "system"
+      ]
     },
-
     "actors": {
       "type": "object",
       "description": "Actor definitions (actors.yaml)",
@@ -149,14 +204,18 @@
                 "description": "Description of who/what this actor is"
               }
             },
-            "required": ["id", "description"],
+            "required": [
+              "id",
+              "description"
+            ],
             "additionalProperties": true
           }
         }
       },
-      "required": ["actors"]
+      "required": [
+        "actors"
+      ]
     },
-
     "components": {
       "type": "object",
       "description": "Component definitions (components.yaml)",
@@ -181,7 +240,17 @@
               "type": {
                 "type": "string",
                 "description": "Component type",
-                "enum": ["frontend", "api", "service", "database", "queue", "external", "external_service", "cache", "other"]
+                "enum": [
+                  "frontend",
+                  "api",
+                  "service",
+                  "database",
+                  "queue",
+                  "external",
+                  "external_service",
+                  "cache",
+                  "other"
+                ]
               },
               "technology": {
                 "type": "string",
@@ -200,14 +269,18 @@
                 "description": "Glob patterns mapping this component to source files in the repository (e.g., 'src/api/**', 'src/routes/*.ts'). Used for PR-to-component mapping in threat review workflows."
               }
             },
-            "required": ["id", "description"],
+            "required": [
+              "id",
+              "description"
+            ],
             "additionalProperties": true
           }
         }
       },
-      "required": ["components"]
+      "required": [
+        "components"
+      ]
     },
-
     "features": {
       "type": "object",
       "description": "Feature definitions (features.yaml)",
@@ -228,22 +301,30 @@
               },
               "input_data": {
                 "type": "array",
-                "items": { "type": "string" },
+                "items": {
+                  "type": "string"
+                },
                 "description": "Data inputs required by this feature"
               },
               "output_data": {
                 "type": "array",
-                "items": { "type": "string" },
+                "items": {
+                  "type": "string"
+                },
                 "description": "Data outputs produced by this feature"
               },
               "data_flows": {
                 "type": "array",
-                "items": { "$ref": "#/definitions/entity_id" },
+                "items": {
+                  "$ref": "#/definitions/entity_id"
+                },
                 "description": "Data flow IDs involved in this feature"
               },
               "threat_actors": {
                 "type": "array",
-                "items": { "$ref": "#/definitions/threat_actor_id" },
+                "items": {
+                  "$ref": "#/definitions/threat_actor_id"
+                },
                 "description": "Threat actor IDs relevant to this feature"
               },
               "threats": {
@@ -269,14 +350,18 @@
                 "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
               }
             },
-            "required": ["name", "goal"],
+            "required": [
+              "name",
+              "goal"
+            ],
             "additionalProperties": true
           }
         }
       },
-      "required": ["features"]
+      "required": [
+        "features"
+      ]
     },
-
     "data_flows": {
       "type": "object",
       "description": "Data flow definitions (data_flows.yaml)",
@@ -319,14 +404,20 @@
                 "description": "Data sensitivity level (e.g., normal, critical)"
               }
             },
-            "required": ["id", "source", "destination", "data_description"],
+            "required": [
+              "id",
+              "source",
+              "destination",
+              "data_description"
+            ],
             "additionalProperties": true
           }
         }
       },
-      "required": ["data_flows"]
+      "required": [
+        "data_flows"
+      ]
     },
-
     "threat_catalog": {
       "type": "object",
       "description": "Threat definitions (threats/threats.yaml)",
@@ -358,18 +449,24 @@
               },
               "suggested_mitigations": {
                 "type": "array",
-                "items": { "$ref": "#/definitions/mitigation_id" },
+                "items": {
+                  "$ref": "#/definitions/mitigation_id"
+                },
                 "description": "Default mitigations applied when a feature uses 'default'"
               }
             },
-            "required": ["name", "description"],
+            "required": [
+              "name",
+              "description"
+            ],
             "additionalProperties": true
           }
         }
       },
-      "required": ["threats"]
+      "required": [
+        "threats"
+      ]
     },
-
     "threat_mitigations": {
       "type": "object",
       "description": "Mitigation catalog (threats/mitigations.yaml)",
@@ -382,9 +479,10 @@
           }
         }
       },
-      "required": ["mitigations"]
+      "required": [
+        "mitigations"
+      ]
     },
-
     "threat_actors": {
       "type": "object",
       "description": "Threat actor profiles (threats/threat_actors.yaml)",
@@ -403,12 +501,17 @@
                 "description": "Description of the threat actor"
               }
             },
-            "required": ["id", "description"],
+            "required": [
+              "id",
+              "description"
+            ],
             "additionalProperties": true
           }
         }
       },
-      "required": ["threat_actors"]
+      "required": [
+        "threat_actors"
+      ]
     }
   }
 }
