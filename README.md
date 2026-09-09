@@ -86,20 +86,35 @@ The skill activates automatically. It also auto-triggers when you edit any `.tmd
 
 ### Claude Code
 
-**1.** Initialize a threat model and copy the agent instructions:
+**1.** Install the skill (once per machine, or per project):
 
 ```bash
-tmdd init --template web-app -n "My App" -d "Description"
-cp path/to/tmdd/agents/AGENTS.md .tmdd/AGENTS.md
+# personal skill, available in every project
+cp -r agents/claude-skill ~/.claude/skills/threat-model
+
+# or project-scoped, committed with the repo
+cp -r agents/claude-skill .claude/skills/threat-model
 ```
 
-Claude Code auto-discovers `AGENTS.md` files and uses them as context.
-
-**2.** Ask Claude Code:
+**2.** Open your project in Claude Code and ask:
 
 ```
-"Analyze this codebase and update the threat model in .tmdd/"
+/threat-model model                      # threat-model the existing codebase
+/threat-model feature "Password Reset"   # add one feature to the model
+/threat-model review --base origin/main  # security-review a branch against the model
+/threat-model audit                      # check the model for drift against the code
 ```
+
+The skill also triggers on plain requests such as "threat model this repo" or "review this
+PR for security". It runs a short scoping interview, inventories the attack surface and
+audits dependencies, traces every untrusted input to the sinks it reaches, builds an
+authorization matrix, fills a STRIDE-per-element coverage matrix (saved to
+`.tmdd/analysis/`), checks reachability and control bypasses before assigning severity
+with a fixed rubric, and writes the YAML with `flows`/`status` bindings so `tmdd review`
+stays precise. See [agents/README.md](agents/README.md) for details.
+
+The lighter-weight alternative is still supported: copy `agents/AGENTS.md` to
+`.tmdd/AGENTS.md` and Claude Code will pick it up as context.
 
 ### What the agent instructions solve
 

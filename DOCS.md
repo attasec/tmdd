@@ -225,6 +225,7 @@ tmdd/
 │   ├── generators/          # AI prompt generators (threat + implementation)
 │   └── templates/           # Project templates (minimal, web-app, api)
 ├── agents/                  # Pre-built AI agent instructions
+│   ├── claude-skill/        # Claude Code skill (/threat-model): workflows + methodology + schema
 │   ├── cursor-skill/        # Cursor Skill for architecture-aware threat modeling
 │   └── AGENTS.md            # Claude Code instructions (copy to .tmdd/)
 ├── diagram.py               # tmdd-diagram command
